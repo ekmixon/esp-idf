@@ -149,7 +149,7 @@ class SpiffsObjLuPage(SpiffsPage):
         SpiffsPage.__init__(self, bix, build_config)
 
         self.obj_ids_limit = self.build_config.OBJ_LU_PAGES_OBJ_IDS_LIM
-        self.obj_ids = list()  # type: typing.List[ObjIdsItem]
+        self.obj_ids = []
 
     def _calc_magic(self, blocks_lim):  # type: (int) -> int
         # Calculate the magic value mirroring computation done by the macro SPIFFS_MAGIC defined in
@@ -162,7 +162,7 @@ class SpiffsObjLuPage(SpiffsPage):
         return magic & mask
 
     def register_page(self, page):  # type: (TSP) -> None
-        if not self.obj_ids_limit > 0:
+        if self.obj_ids_limit <= 0:
             raise SpiffsFullError()
 
         obj_id = (page.obj_id, page.__class__)
@@ -189,13 +189,13 @@ class SpiffsObjLuPage(SpiffsPage):
         # spot taken up by the last obj id on last lookup page. The parent is responsible
         # for determining which is the last lookup page and calling this function.
         remaining = self.obj_ids_limit
-        empty_obj_id_dict = {
-            1: 0xFF,
-            2: 0xFFFF,
-            4: 0xFFFFFFFF,
-            8: 0xFFFFFFFFFFFFFFFF
-        }
         if remaining >= 2:
+            empty_obj_id_dict = {
+                1: 0xFF,
+                2: 0xFFFF,
+                4: 0xFFFFFFFF,
+                8: 0xFFFFFFFFFFFFFFFF
+            }
             for i in range(remaining):
                 if i == remaining - 2:
                     self.obj_ids.append((self._calc_magic(blocks_lim), SpiffsObjDataPage))
@@ -218,10 +218,10 @@ class SpiffsObjIndexPage(SpiffsObjPageWithIdx):
         else:
             self.pages_lim = self.build_config.OBJ_INDEX_PAGES_OBJ_IDS_LIM
 
-        self.pages = list()  # type: typing.List[int]
+        self.pages = []
 
     def register_page(self, page):  # type: (SpiffsObjDataPage) -> None
-        if not self.pages_lim > 0:
+        if self.pages_lim <= 0:
             raise SpiffsFullError
 
         self.pages.append(page.offset)
@@ -304,11 +304,11 @@ class SpiffsBlock(object):
         self.build_config = build_config
         self.offset = bix * self.build_config.block_size
         self.remaining_pages = self.build_config.OBJ_USABLE_PAGES_PER_BLOCK
-        self.pages = list()  # type: typing.List[SpiffsPage]
+        self.pages = []
         self.bix = bix
 
-        lu_pages = list()
-        for i in range(self.build_config.OBJ_LU_PAGES_PER_BLOCK):
+        lu_pages = []
+        for _ in range(self.build_config.OBJ_LU_PAGES_PER_BLOCK):
             page = SpiffsObjLuPage(self.bix, self.build_config)
             lu_pages.append(page)
 
@@ -339,7 +339,7 @@ class SpiffsBlock(object):
 
     def begin_obj(self, obj_id, size, name, obj_index_span_ix=0, obj_data_span_ix=0
                   ):  # type: (int, int, str, int, int) -> None
-        if not self.remaining_pages > 0:
+        if self.remaining_pages <= 0:
             raise SpiffsFullError()
         self._reset()
 
@@ -356,7 +356,7 @@ class SpiffsBlock(object):
         self.cur_obj_index_span_ix += 1
 
     def update_obj(self, contents):  # type: (bytes) -> None
-        if not self.remaining_pages > 0:
+        if self.remaining_pages <= 0:
             raise SpiffsFullError()
         page = SpiffsObjDataPage(self.offset + (len(self.pages) * self.build_config.page_size),
                                  self.cur_obj_id, self.cur_obj_data_span_ix, contents, self.build_config)
@@ -399,7 +399,7 @@ class SpiffsFS(object):
         self.img_size = img_size
         self.build_config = build_config
 
-        self.blocks = list()  # type: typing.List[SpiffsBlock]
+        self.blocks = []
         self.blocks_lim = self.img_size // self.build_config.block_size
         self.remaining_blocks = self.blocks_lim
         self.cur_obj_id = 1  # starting object id
@@ -434,9 +434,9 @@ class SpiffsFS(object):
             block = self._create_block()
             block.begin_obj(self.cur_obj_id, len(contents), name)
 
-        contents_chunk = stream.read(self.build_config.OBJ_DATA_PAGE_CONTENT_LEN)
-
-        while contents_chunk:
+        while contents_chunk := stream.read(
+            self.build_config.OBJ_DATA_PAGE_CONTENT_LEN
+        ):
             try:
                 block = self.blocks[-1]
                 try:
@@ -464,19 +464,15 @@ class SpiffsFS(object):
                 block.cur_obj_index_span_ix = prev_block.cur_obj_index_span_ix
                 continue
 
-            contents_chunk = stream.read(self.build_config.OBJ_DATA_PAGE_CONTENT_LEN)
-
         block.end_obj()
 
         self.cur_obj_id += 1
 
     def to_binary(self):  # type: () -> bytes
         img = b''
-        all_blocks = []
-        for block in self.blocks:
-            all_blocks.append(block.to_binary(self.blocks_lim))
-        bix = len(self.blocks)
+        all_blocks = [block.to_binary(self.blocks_lim) for block in self.blocks]
         if self.build_config.use_magic:
+            bix = len(self.blocks)
             # Create empty blocks with magic numbers
             while self.remaining_blocks > 0:
                 block = SpiffsBlock(bix, self.build_config)
@@ -486,7 +482,7 @@ class SpiffsFS(object):
         else:
             # Just fill remaining spaces FF's
             all_blocks.append(b'\xFF' * (self.img_size - len(all_blocks) * self.build_config.block_size))
-        img += b''.join([blk for blk in all_blocks])
+        img += b''.join(list(all_blocks))
         return img
 
 
@@ -500,11 +496,14 @@ class CustomHelpFormatter(argparse.HelpFormatter):
     def _get_help_string(self, action):  # type: (argparse.Action) -> str
         if action.help is None:
             return ''
-        if '%(default)' not in action.help and '(default:' not in action.help:
-            if action.default is not argparse.SUPPRESS:
-                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
-                if action.option_strings or action.nargs in defaulting_nargs:
-                    return action.help + ' (default: %(default)s)'
+        if (
+            '%(default)' not in action.help
+            and '(default:' not in action.help
+            and action.default is not argparse.SUPPRESS
+        ):
+            defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+            if action.option_strings or action.nargs in defaulting_nargs:
+                return f'{action.help} (default: %(default)s)'
         return action.help
 
 
@@ -578,7 +577,7 @@ def main():  # type: () -> None
     args = parser.parse_args()
 
     if not os.path.exists(args.base_dir):
-        raise RuntimeError('given base directory %s does not exist' % args.base_dir)
+        raise RuntimeError(f'given base directory {args.base_dir} does not exist')
 
     with open(args.output_file, 'wb') as image_file:
         image_size = int(args.image_size, 0)

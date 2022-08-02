@@ -27,11 +27,11 @@ def io_listener(dut1):
             continue
         if data != () and data[0] != b'':
             packet_data = data[0]
-            print('Packet_data>{}<'.format(packet_data))
+            print(f'Packet_data>{packet_data}<')
             response = bytearray.fromhex(packet_data.decode())
             print('Sending to socket:')
             packet = ' '.join(format(x, '02x') for x in bytearray(response))
-            print('Packet>{}<'.format(packet))
+            print(f'Packet>{packet}<')
             if client_address is not None:
                 sock.sendto(response, ('127.0.0.1', 7777))
 
@@ -50,7 +50,7 @@ def sock_listener(dut1):
             try:
                 payload, client_address = sock.recvfrom(1024)
                 packet = ' '.join(format(x, '02x') for x in bytearray(payload))
-                print('Received from address {}, data {}'.format(client_address, packet))
+                print(f'Received from address {client_address}, data {packet}')
                 dut1.write(str.encode(packet))
             except socket.timeout:
                 pass
@@ -74,7 +74,7 @@ def lwip_test_suite(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'net_suite.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('net_suite', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('net_suite', f'{bin_size // 1024}KB')
     ttfw_idf.check_performance('net_suite', bin_size // 1024, dut1.TARGET)
     dut1.start_app()
     thread1 = Thread(target=sock_listener, args=(dut1, ))
@@ -93,13 +93,23 @@ def lwip_test_suite(env, extra_data):
         # copy esp32 specific files to ttcn net-suite dir
         copyfile(os.path.join(test_dir, TTCN_SRC), os.path.join(netsuite_src_path, TTCN_SRC))
         copyfile(os.path.join(test_dir, TTCN_CFG), os.path.join(netsuite_src_path, TTCN_CFG))
-        proc = subprocess.Popen(['bash', '-c', 'cd ' + netsuite_src_path + ' && source make.sh'],
-                                cwd=netsuite_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(
+            ['bash', '-c', f'cd {netsuite_src_path} && source make.sh'],
+            cwd=netsuite_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
         output = proc.stdout.read()
         print('Note: First build step we expect failure (titan/net_suite build system not suitable for multijob make)')
         print(output)
-        proc = subprocess.Popen(['bash', '-c', 'cd ' + netsuite_src_path + ' && make'],
-                                cwd=netsuite_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(
+            ['bash', '-c', f'cd {netsuite_src_path} && make'],
+            cwd=netsuite_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
         print('Note: This time all dependencies shall be generated -- multijob make shall pass')
         output = proc.stdout.read()
         print(output)
@@ -116,17 +126,13 @@ def lwip_test_suite(env, extra_data):
         print('Collecting results')
         print('------------------')
         verdict_stats = re.search('(Verdict statistics:.*)', output)
-        if verdict_stats:
-            verdict_stats = verdict_stats.group(1)
-        else:
-            verdict_stats = b''
-        verdict = re.search('Overall verdict: pass', output)
-        if verdict:
+        verdict_stats = verdict_stats[1] if verdict_stats else b''
+        if verdict := re.search('Overall verdict: pass', output):
             print('Test passed!')
             Utility.console_log(verdict_stats, 'green')
         else:
             Utility.console_log(verdict_stats, 'red')
-            raise ValueError('Test failed with: {}'.format(verdict_stats))
+            raise ValueError(f'Test failed with: {verdict_stats}')
     else:
         try:
             # Executing the test suite

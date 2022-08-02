@@ -37,7 +37,7 @@ except ImportError:
 
 def test_redirect(ip, port):  # type: (str, str) -> str # pylint: disable=unused-argument
     # Establish HTTP connection
-    sess = http.client.HTTPConnection(ip + ':' + port, timeout=15)
+    sess = http.client.HTTPConnection(f'{ip}:{port}', timeout=15)
 
     uri = '/test'
     # GET response
@@ -46,13 +46,13 @@ def test_redirect(ip, port):  # type: (str, str) -> str # pylint: disable=unused
     resp_hdrs = resp.getheaders()
 
     if resp.status != 302:
-        raise RuntimeError('Redirect failed, response status: {}'.format(resp.status))
+        raise RuntimeError(f'Redirect failed, response status: {resp.status}')
 
     for hdr in resp_hdrs:
         if hdr[0] == 'location':
             uri = hdr[1]
 
-    print('Redirected to uri: {}'.format(uri))
+    print(f'Redirected to uri: {uri}')
 
     # Close HTTP connection
     sess.close()
@@ -62,7 +62,7 @@ def test_redirect(ip, port):  # type: (str, str) -> str # pylint: disable=unused
 
 def test_captive_page(ip, port, uri):  # type: (str, str, str) -> bool # pylint: disable=unused-argument
     # Establish HTTP connection
-    sess = http.client.HTTPConnection(ip + ':' + port, timeout=15)
+    sess = http.client.HTTPConnection(f'{ip}:{port}', timeout=15)
 
     # GET response
     sess.request('GET', url=uri)
@@ -72,7 +72,10 @@ def test_captive_page(ip, port, uri):  # type: (str, str, str) -> bool # pylint:
     search_str = 'Redirect to the captive portal'
 
     if search_str not in resp_data:
-        raise RuntimeError('Failed to match {} with data from captive portal: {}'.format(search_str, resp_data))
+        raise RuntimeError(
+            f'Failed to match {search_str} with data from captive portal: {resp_data}'
+        )
+
 
     # Close HTTP connection
     sess.close()
@@ -87,7 +90,7 @@ def test_example_captive_portal(env, extra_data):  # type: (tiny_test_fw.Env.Env
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'captive_portal.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('captive_portal_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('captive_portal_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     dut1.start_app()
@@ -102,9 +105,9 @@ def test_example_captive_portal(env, extra_data):  # type: (tiny_test_fw.Env.Env
     iface = wifi_tools.get_wiface_name()
     if iface is None:
         raise RuntimeError('Failed to get Wi-Fi interface on host')
-    print('Interface name  : ' + iface)
-    print('SoftAP SSID     : ' + ssid)
-    print('SoftAP Password : ' + password)
+    print(f'Interface name  : {iface}')
+    print(f'SoftAP SSID     : {ssid}')
+    print(f'SoftAP Password : {password}')
 
     try:
         ctrl = wifi_tools.wpa_cli(iface, reset_on_exit=True)
@@ -112,13 +115,13 @@ def test_example_captive_portal(env, extra_data):  # type: (tiny_test_fw.Env.Env
         try:
             ip = ctrl.connect(ssid, password)
         except RuntimeError as err:
-            Utility.console_log('error: {}'.format(err))
+            Utility.console_log(f'error: {err}')
         try:
             got_ip = dut1.expect(re.compile(r'DHCP server assigned IP to a station, IP is: (\d+.\d+.\d+.\d+)'), timeout=60)
-            Utility.console_log('got_ip: {}'.format(got_ip))
+            Utility.console_log(f'got_ip: {got_ip}')
             got_ip = got_ip[0]
             if ip != got_ip:
-                raise RuntimeError('SoftAP connected to another host! {} != {}'.format(ip, got_ip))
+                raise RuntimeError(f'SoftAP connected to another host! {ip} != {got_ip}')
         except tiny_test_fw.DUT.ExpectTimeout:
             # print what is happening on DUT side
             Utility.console_log('in exception tiny_test_fw.DUT.ExpectTimeout')
@@ -128,7 +131,7 @@ def test_example_captive_portal(env, extra_data):  # type: (tiny_test_fw.Env.Env
 
         host_name = 'www.google.com'
         host = socket.gethostbyname(host_name)
-        print('hostname: {} resolved to: {}'.format(host_name, host))
+        print(f'hostname: {host_name} resolved to: {host}')
         if host != ap_ip:
             raise RuntimeError("DNS server failed to redirect question to the softAP's IP")
 

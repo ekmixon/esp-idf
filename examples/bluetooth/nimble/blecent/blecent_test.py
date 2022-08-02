@@ -110,7 +110,7 @@ def test_example_app_ble_central(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut.app.binary_path, 'blecent.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('blecent_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('blecent_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting blecent example test app')

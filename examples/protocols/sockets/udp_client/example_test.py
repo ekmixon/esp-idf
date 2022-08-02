@@ -26,7 +26,7 @@ INTERFACE = 'eth0'
 
 def get_my_ip(type):
     for i in netifaces.ifaddresses(INTERFACE)[type]:
-        return i['addr'].replace('%{}'.format(INTERFACE), '')
+        return i['addr'].replace(f'%{INTERFACE}', '')
 
 
 class UdpServer:
@@ -44,10 +44,10 @@ class UdpServer:
         try:
             self.socket.bind(('', self.port))
         except socket.error as e:
-            print('Bind failed:{}'.format(e))
+            print(f'Bind failed:{e}')
             raise
 
-        print('Starting server on port={} family_addr={}'.format(self.port, self.family_addr))
+        print(f'Starting server on port={self.port} family_addr={self.family_addr}')
         self.server_thread = Thread(target=self.run_server)
         self.server_thread.start()
         return self
@@ -68,11 +68,11 @@ class UdpServer:
                 if not data:
                     return
                 data = data.decode()
-                print('Reply[' + addr[0] + ':' + str(addr[1]) + '] - ' + data)
-                reply = 'OK: ' + data
+                print(f'Reply[{addr[0]}:{str(addr[1])}] - {data}')
+                reply = f'OK: {data}'
                 self.socket.sendto(reply.encode(), addr)
             except socket.error as e:
-                print('Running server failed:{}'.format(e))
+                print(f'Running server failed:{e}')
                 raise
             if not self.persist:
                 break
@@ -90,26 +90,26 @@ def test_examples_protocol_socket_udpclient(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'udp_client.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('udp_client_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('udp_client_bin_size', f'{bin_size // 1024}KB')
 
     # start test
     dut1.start_app()
 
     ipv4 = dut1.expect(re.compile(r' IPv4 address: ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)'), timeout=30)[0]
     ipv6_r = r':'.join((r'[0-9a-fA-F]{4}',) * 8)    # expect all 8 octets from IPv6 (assumes it's printed in the long form)
-    ipv6 = dut1.expect(re.compile(r' IPv6 address: ({})'.format(ipv6_r)), timeout=30)[0]
-    print('Connected with IPv4={} and IPv6={}'.format(ipv4, ipv6))
+    ipv6 = dut1.expect(re.compile(f' IPv6 address: ({ipv6_r})'), timeout=30)[0]
+    print(f'Connected with IPv4={ipv4} and IPv6={ipv6}')
 
     # test IPv4
     with UdpServer(PORT, socket.AF_INET):
         server_ip = get_my_ip(netifaces.AF_INET)
-        print('Connect udp client to server IP={}'.format(server_ip))
+        print(f'Connect udp client to server IP={server_ip}')
         dut1.write(server_ip)
         dut1.expect(re.compile(r'OK: Message from ESP32'))
     # test IPv6
     with UdpServer(PORT, socket.AF_INET6):
         server_ip = get_my_ip(netifaces.AF_INET6)
-        print('Connect udp client to server IP={}'.format(server_ip))
+        print(f'Connect udp client to server IP={server_ip}')
         dut1.write(server_ip)
         dut1.expect(re.compile(r'OK: Message from ESP32'))
 

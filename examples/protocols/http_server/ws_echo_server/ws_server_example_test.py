@@ -36,7 +36,7 @@ class WsClient:
         self.ws = websocket.WebSocket()
 
     def __enter__(self):
-        self.ws.connect('ws://{}:{}/ws'.format(self.ip, self.port))
+        self.ws.connect(f'ws://{self.ip}:{self.port}/ws')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -48,9 +48,7 @@ class WsClient:
     def write(self, data='', opcode=OPCODE_TEXT):
         if opcode == OPCODE_BIN:
             return self.ws.send_binary(data.encode())
-        if opcode == OPCODE_PING:
-            return self.ws.ping(data)
-        return self.ws.send(data)
+        return self.ws.ping(data) if opcode == OPCODE_PING else self.ws.send(data)
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_WIFI_Protocols')
@@ -61,7 +59,7 @@ def test_examples_protocol_http_ws_echo_server(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'ws_echo_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http_ws_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('http_ws_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting ws-echo-server test app based on http_server')
@@ -72,8 +70,8 @@ def test_examples_protocol_http_ws_echo_server(env, extra_data):
     got_ip = dut1.expect(re.compile(r'IPv4 address: (\d+.\d+.\d+.\d+)'), timeout=60)[0]
     got_port = dut1.expect(re.compile(r"Starting server on port: '(\d+)'"), timeout=60)[0]
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Start ws server test
     with WsClient(got_ip, int(got_port)) as ws:
@@ -81,23 +79,29 @@ def test_examples_protocol_http_ws_echo_server(env, extra_data):
         for expected_opcode in [OPCODE_TEXT, OPCODE_BIN, OPCODE_PING]:
             ws.write(data=DATA, opcode=expected_opcode)
             opcode, data = ws.read()
-            Utility.console_log('Testing opcode {}: Received opcode:{}, data:{}'.format(expected_opcode, opcode, data))
+            Utility.console_log(
+                f'Testing opcode {expected_opcode}: Received opcode:{opcode}, data:{data}'
+            )
+
             data = data.decode()
             if expected_opcode == OPCODE_PING:
                 dut1.expect('Got a WS PING frame, Replying PONG')
                 if opcode != OPCODE_PONG or data != DATA:
-                    raise RuntimeError('Failed to receive correct opcode:{} or data:{}'.format(opcode, data))
+                    raise RuntimeError(f'Failed to receive correct opcode:{opcode} or data:{data}')
                 continue
             dut_data = dut1.expect(re.compile(r'Got packet with message: ([A-Za-z0-9_]*)'))[0]
             dut_opcode = int(dut1.expect(re.compile(r'Packet type: ([0-9]*)'))[0])
             if opcode != expected_opcode or data != DATA or opcode != dut_opcode or data != dut_data:
-                raise RuntimeError('Failed to receive correct opcode:{} or data:{}'.format(opcode, data))
+                raise RuntimeError(f'Failed to receive correct opcode:{opcode} or data:{data}')
         ws.write(data='Trigger async', opcode=OPCODE_TEXT)
         opcode, data = ws.read()
-        Utility.console_log('Testing async send: Received opcode:{}, data:{}'.format(opcode, data))
+        Utility.console_log(
+            f'Testing async send: Received opcode:{opcode}, data:{data}'
+        )
+
         data = data.decode()
         if opcode != OPCODE_TEXT or data != 'Async data':
-            raise RuntimeError('Failed to receive correct opcode:{} or data:{}'.format(opcode, data))
+            raise RuntimeError(f'Failed to receive correct opcode:{opcode} or data:{data}')
 
 
 if __name__ == '__main__':

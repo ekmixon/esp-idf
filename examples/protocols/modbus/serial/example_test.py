@@ -124,8 +124,7 @@ def test_expect_re(data, pattern):
     regex = re.compile(pattern)
     if isinstance(data, type(u'')):
         data = data.encode('utf-8')
-    match = regex.search(data)
-    if match:
+    if match := regex.search(data):
         ret = tuple(None if x is None else x.decode() for x in match.groups())
         index = match.end()
     else:
@@ -150,7 +149,10 @@ def test_check_output(data=None, check_dict=None, expect_dict=None):
             if index is not None:
                 logger.debug('Found key{%s}=%s, line: \n%s' % (key, group, line))
                 if expect_dict[key] == group:
-                    logger.debug('The result is correct for the key:%s, expected:%s == returned:%s' % (key, str(expect_dict[key]), str(group)))
+                    logger.debug(
+                        f'The result is correct for the key:{key}, expected:{str(expect_dict[key])} == returned:{str(group)}'
+                    )
+
                     match_count += 1
     return match_count
 
@@ -164,7 +166,10 @@ def test_check_mode(dut=None, mode_str=None, value=None):
         logger.info('%s {%s} = %s.\n' % (str(dut), mode_str, opt))
         return value == opt
     except Exception:
-        logger.info('ENV_TEST_FAILURE: %s: Cannot find option %s in sdkconfig.' % (str(dut), mode_str))
+        logger.info(
+            f'ENV_TEST_FAILURE: {str(dut)}: Cannot find option {mode_str} in sdkconfig.'
+        )
+
     return False
 
 
@@ -231,12 +236,18 @@ def test_modbus_communication(env, comm_mode):
 
     # Check if test threads completed successfully and captured data
     if not dut_slave_thread.result or dut_slave_thread.data is None:
-        logger.error('The thread %s was not run successfully.' % dut_slave_thread.tname)
-        raise Exception('The thread %s was not run successfully.' % dut_slave_thread.tname)
+        logger.error(f'The thread {dut_slave_thread.tname} was not run successfully.')
+        raise Exception(
+            f'The thread {dut_slave_thread.tname} was not run successfully.'
+        )
+
 
     if not dut_master_thread.result or dut_master_thread.data is None:
-        logger.error('The thread %s was not run successfully.' % dut_slave_thread.tname)
-        raise Exception('The thread %s was not run successfully.' % dut_master_thread.tname)
+        logger.error(f'The thread {dut_slave_thread.tname} was not run successfully.')
+        raise Exception(
+            f'The thread {dut_master_thread.tname} was not run successfully.'
+        )
+
 
     # Filter output to get test messages
     master_output = test_filter_output(dut_master_thread.data, master_expect[0], master_expect[len(master_expect) - 1])
@@ -285,6 +296,6 @@ if __name__ == '__main__':
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.addHandler(ch)
-    logger.info('Start script %s.' % os.path.basename(__file__))
+    logger.info(f'Start script {os.path.basename(__file__)}.')
     test_modbus_communication()
     logging.shutdown()

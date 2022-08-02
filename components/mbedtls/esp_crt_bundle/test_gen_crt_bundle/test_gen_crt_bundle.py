@@ -12,8 +12,11 @@ except ImportError:
 
 
 idf_path            = os.environ['IDF_PATH']
-ca_crts_path        = idf_path + '/components/mbedtls/esp_crt_bundle/'
-test_crts_path      = idf_path + '/components/mbedtls/esp_crt_bundle/test_gen_crt_bundle/'
+ca_crts_path = f'{idf_path}/components/mbedtls/esp_crt_bundle/'
+test_crts_path = (
+    f'{idf_path}/components/mbedtls/esp_crt_bundle/test_gen_crt_bundle/'
+)
+
 
 ca_bundle_bin_file  = 'x509_crt_bundle'
 

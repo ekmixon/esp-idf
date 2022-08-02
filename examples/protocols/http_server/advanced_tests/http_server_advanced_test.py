@@ -43,7 +43,7 @@ def test_examples_protocol_http_server_advanced(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'tests.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('http_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting http_server advanced test app')
@@ -63,8 +63,8 @@ def test_examples_protocol_http_server_advanced(env, extra_data):
     max_uri_len = int(result[3])
     max_stack_size = int(result[4])
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Run test script
     # If failed raise appropriate exception

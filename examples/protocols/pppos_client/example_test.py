@@ -41,8 +41,8 @@ class SerialThread(object):
                     if snd != b'':
                         snd += b'\n'
                     snd += b'OK\n'
-                    f.write('Received: {}\n'.format(repr(cmd.decode())))
-                    f.write('Sent: {}\n'.format(repr(snd.decode())))
+                    f.write(f'Received: {repr(cmd.decode())}\n')
+                    f.write(f'Sent: {repr(snd.decode())}\n')
                     ser.write(snd)
 
     def __init__(self, port, log_path):
@@ -68,7 +68,7 @@ def test_examples_pppos_client(env, extra_data):
     dut = env.get_dut('pppos_client', rel_project_path)
     project_path = os.path.join(dut.app.get_sdk_path(), rel_project_path)
 
-    modem_port = '/dev/ttyUSB{}'.format(0 if dut.port.endswith('1') else 1)
+    modem_port = f"/dev/ttyUSB{0 if dut.port.endswith('1') else 1}"
 
     with SerialThread(modem_port, os.path.join(project_path, 'serial.log')):
         dut.start_app()
@@ -82,8 +82,8 @@ def test_examples_pppos_client(env, extra_data):
                        'pppos_example: Modem PPP Started',
                        timeout=60)
 
-    cmd = ('pppd {} 115200 10.0.0.1:10.0.0.2 logfile {} local noauth debug nocrtscts nodetach +ipv6'
-           ''.format(modem_port, os.path.join(project_path, 'ppp.log')))
+    cmd = f"pppd {modem_port} 115200 10.0.0.1:10.0.0.2 logfile {os.path.join(project_path, 'ppp.log')} local noauth debug nocrtscts nodetach +ipv6"
+
     with ttfw_idf.CustomProcess(cmd, '/dev/null'):  # Nothing is printed here
         dut.expect_all('pppos_example: Modem Connect to PPP Server',
                        'pppos_example: IP          : 10.0.0.2',

@@ -35,8 +35,8 @@ try:
 
 except ImportError:
     idf_path = os.environ['IDF_PATH']
-    sys.path.insert(0, idf_path + '/components/protocomm/python')
-    sys.path.insert(1, idf_path + '/tools/esp_prov')
+    sys.path.insert(0, f'{idf_path}/components/protocomm/python')
+    sys.path.insert(1, f'{idf_path}/tools/esp_prov')
 
     import esp_prov
     import security
@@ -102,9 +102,7 @@ def decode_prop_value(prop, value):
 
 def str_to_prop_value(prop, strval):
     try:
-        if prop['type'] == PROP_TYPE_TIMESTAMP:
-            return int(strval)
-        elif prop['type'] == PROP_TYPE_INT32:
+        if prop['type'] in [PROP_TYPE_TIMESTAMP, PROP_TYPE_INT32]:
             return int(strval)
         elif prop['type'] == PROP_TYPE_BOOLEAN:
             return bool(strval)
@@ -140,7 +138,7 @@ def get_transport(sel_transport, service_name, check_hostname):
         tp = None
         if (sel_transport == 'http'):
             example_path = os.environ['IDF_PATH'] + '/examples/protocols/esp_local_ctrl'
-            cert_path = example_path + '/main/certs/rootCA.pem'
+            cert_path = f'{example_path}/main/certs/rootCA.pem'
             ssl_ctx = ssl.create_default_context(cafile=cert_path)
             ssl_ctx.check_hostname = check_hostname
             tp = esp_prov.transport.Transport_HTTP(service_name, ssl_ctx)
@@ -244,7 +242,7 @@ def get_all_property_values(tp, security_ctx):
         count = proto_lc.get_prop_count_response(security_ctx, response)
         if count == 0:
             raise RuntimeError('No properties found!')
-        indices = [i for i in range(count)]
+        indices = list(range(count))
         message = proto_lc.get_prop_vals_request(security_ctx, indices)
         response = tp.send_data('esp_local_ctrl/control', message)
         props = proto_lc.get_prop_vals_response(security_ctx, response)
@@ -273,10 +271,10 @@ def set_property_values(tp, security_ctx, props, indices, values, check_readonly
 
 
 def desc_format(*args):
-    desc = ''
-    for arg in args:
-        desc += textwrap.fill(replace_whitespace=False, text=arg) + '\n'
-    return desc
+    return ''.join(
+        textwrap.fill(replace_whitespace=False, text=arg) + '\n'
+        for arg in args
+    )
 
 
 if __name__ == '__main__':
@@ -318,7 +316,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.version != '':
-        print('==== Esp_Ctrl Version: ' + args.version + ' ====')
+        print(f'==== Esp_Ctrl Version: {args.version} ====')
 
     if args.service_name == '':
         args.service_name = 'my_esp_ctrl_device'
@@ -397,7 +395,7 @@ if __name__ == '__main__':
                     raise ValueError('Invalid input')
                 break
             except ValueError as e:
-                print(str(e) + '! Retry...')
+                print(f'{str(e)}! Retry...')
 
         if len(selections) == 1 and selections[0] == 0:
             continue

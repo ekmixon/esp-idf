@@ -29,13 +29,13 @@ class TestEcho(WebSocket):
 
     def handleMessage(self):
         self.sendMessage(self.data)
-        print('Server sent: {}'.format(self.data))
+        print(f'Server sent: {self.data}')
 
     def handleConnected(self):
-        print('Connection from: {}'.format(self.address))
+        print(f'Connection from: {self.address}')
 
     def handleClose(self):
-        print('{} closed the connection'.format(self.address))
+        print(f'{self.address} closed the connection')
 
 
 # Simple Websocket server for testing purposes
@@ -68,14 +68,14 @@ class Websocket(object):
 
 def test_echo(dut):
     dut.expect('WEBSOCKET_EVENT_CONNECTED')
-    for i in range(0, 10):
+    for _ in range(10):
         dut.expect(re.compile(r'Received=hello (\d)'), timeout=30)
     print('All echos received')
 
 
 def test_close(dut):
     code = dut.expect(re.compile(r'WEBSOCKET: Received closed message with code=(\d*)'), timeout=60)[0]
-    print('Received close frame with code {}'.format(code))
+    print(f'Received close frame with code {code}')
 
 
 def test_recv_long_msg(dut, websocket, msg_len, repeats):
@@ -109,7 +109,7 @@ def test_examples_protocol_websocket(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'websocket_example.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('websocket_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('websocket_bin_size', f'{bin_size // 1024}KB')
 
     try:
         if 'CONFIG_WEBSOCKET_URI_FROM_STDIN' in dut1.app.get_sdkconfig():
@@ -128,8 +128,8 @@ def test_examples_protocol_websocket(env, extra_data):
     if uri_from_stdin:
         server_port = 4455
         with Websocket(server_port) as ws:
-            uri = 'ws://{}:{}'.format(get_my_ip(), server_port)
-            print('DUT connecting to {}'.format(uri))
+            uri = f'ws://{get_my_ip()}:{server_port}'
+            print(f'DUT connecting to {uri}')
             dut1.expect('Please enter uri of websocket endpoint', timeout=30)
             dut1.write(uri)
             test_echo(dut1)
@@ -138,7 +138,7 @@ def test_examples_protocol_websocket(env, extra_data):
             test_close(dut1)
 
     else:
-        print('DUT connecting to {}'.format(uri))
+        print(f'DUT connecting to {uri}')
         test_echo(dut1)
 
 

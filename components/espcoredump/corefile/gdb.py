@@ -29,11 +29,14 @@ class EspGDB(object):
         """
         Start GDB and initialize a GdbController instance
         """
-        gdb_args = ['--quiet',  # inhibit dumping info at start-up
-                    '--nx',  # inhibit window interface
-                    '--nw',  # ignore .gdbinit
-                    '--interpreter=mi2',  # use GDB/MI v2
-                    '--core=%s' % core_filename]  # core file
+        gdb_args = [
+            '--quiet',
+            '--nx',
+            '--nw',
+            '--interpreter=mi2',
+            f'--core={core_filename}',
+        ]
+
         for c in gdb_cmds:
             if c:
                 gdb_args += ['-ex', c]
@@ -69,9 +72,10 @@ class EspGDB(object):
             if done_message and done_type and self._gdbmi_filter_responses(more_responses, done_message, done_type):
                 break
         if not filtered_response_list and not multiple:
-            raise ESPCoreDumpError("Couldn't find response with message '{}', type '{}' in responses '{}'".format(
-                resp_message, resp_type, str(all_responses)
-            ))
+            raise ESPCoreDumpError(
+                f"Couldn't find response with message '{resp_message}', type '{resp_type}' in responses '{str(all_responses)}'"
+            )
+
         return filtered_response_list
 
     def _gdbmi_run_cmd_get_one_response(self, cmd, resp_message, resp_type):
@@ -91,11 +95,7 @@ class EspGDB(object):
             # KeyError is raised when "value" is not in "payload"
             return ''
 
-        # Value is of form '0x12345678 "task_name"', extract the actual name
-        result = re.search(r"\"([^']*)\"$", val)
-        if result:
-            return result.group(1)
-        return ''
+        return result[1] if (result := re.search(r"\"([^']*)\"$", val)) else ''
 
     def run_cmd(self, gdb_cmd):
         """ Execute a generic GDB console command via MI2
@@ -117,7 +117,9 @@ class EspGDB(object):
 
     def switch_thread(self, thr_id):
         """ Tell GDB to switch to a specific thread, given its ID """
-        self._gdbmi_run_cmd_get_one_response('-thread-select %s' % thr_id, 'done', 'result')
+        self._gdbmi_run_cmd_get_one_response(
+            f'-thread-select {thr_id}', 'done', 'result'
+        )
 
     @staticmethod
     def _gdbmi_filter_responses(responses, resp_message, resp_type):

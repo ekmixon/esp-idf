@@ -36,7 +36,7 @@ def _test_timer_events(dut):
 
     for expiries in range(1, TIMER_EVENT_LIMIT + 1):
         dut.expect('TIMER_EVENTS:TIMER_EVENT_EXPIRY: posting to default loop')
-        print('Posted timer expiry event {} out of {}'.format(expiries, TIMER_EVENT_LIMIT))
+        print(f'Posted timer expiry event {expiries} out of {TIMER_EVENT_LIMIT}')
 
         if expiries >= TIMER_EVENT_LIMIT:
             dut.expect('TIMER_EVENTS:TIMER_EVENT_STOPPED: posting to default loop')
@@ -46,7 +46,7 @@ def _test_timer_events(dut):
         dut.expect('TIMER_EVENTS:TIMER_EVENT_EXPIRY: timer_any_handler')
         dut.expect('TIMER_EVENTS:TIMER_EVENT_EXPIRY: all_event_handler')
 
-        print('Handled timer expiry event {} out of {}'.format(expiries, TIMER_EVENT_LIMIT))
+        print(f'Handled timer expiry event {expiries} out of {TIMER_EVENT_LIMIT}')
 
     dut.expect('TIMER_EVENTS:TIMER_EVENT_STOPPED: timer_stopped_handler')
     dut.expect('TIMER_EVENTS:TIMER_EVENT_STOPPED: deleted timer event source')
@@ -63,7 +63,7 @@ def _test_iteration_events(dut):
 
     for iteration in range(1, TASK_ITERATION_LIMIT + 1):
         dut.expect(TASK_ITERATION_POST.format(iteration))
-        print('Posted iteration {} out of {}'.format(iteration, TASK_ITERATION_LIMIT))
+        print(f'Posted iteration {iteration} out of {TASK_ITERATION_LIMIT}')
 
         if iteration < TASK_UNREGISTRATION_LIMIT:
             dut.expect(TASK_ITERATION_HANDLING.format(iteration))
@@ -71,11 +71,14 @@ def _test_iteration_events(dut):
         elif iteration == TASK_UNREGISTRATION_LIMIT:
             dut.expect_all('TASK_EVENTS:TASK_ITERATION_EVENT: unregistering task_iteration_handler',
                            'TASK_EVENTS:TASK_ITERATION_EVENT: all_event_handler')
-            print('Unregistered handler at iteration {} out of {}'.format(iteration, TASK_ITERATION_LIMIT))
+            print(
+                f'Unregistered handler at iteration {iteration} out of {TASK_ITERATION_LIMIT}'
+            )
+
         else:
             dut.expect('TASK_EVENTS:TASK_ITERATION_EVENT: all_event_handler')
 
-        print('Handled iteration {} out of {}'.format(iteration, TASK_ITERATION_LIMIT))
+        print(f'Handled iteration {iteration} out of {TASK_ITERATION_LIMIT}')
 
     dut.expect('TASK_EVENTS:TASK_ITERATION_EVENT: deleting task event source')
     print('Deleted task event source')

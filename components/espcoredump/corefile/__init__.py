@@ -82,7 +82,7 @@ class BaseTargetMethods(with_metaclass(abc.ABCMeta, BaseArchMethodsMixin)):  # t
         self._set_attr_from_soc_header()
 
     def _set_attr_from_soc_header(self):  # type: () -> None
-        module = import_module('corefile.soc_headers.{}'.format(self.TARGET))
+        module = import_module(f'corefile.soc_headers.{self.TARGET}')
         for k, v in module.__dict__.items():
             if k.startswith('SOC_'):
                 setattr(self, k, v)
@@ -104,15 +104,16 @@ class BaseTargetMethods(with_metaclass(abc.ABCMeta, BaseArchMethodsMixin)):  # t
                      self._esp_ptr_in_iram,
                      self._esp_ptr_in_rtc_slow,
                      self._esp_ptr_in_rtc_dram_fast]:
-            res = func(tcb_addr) and func(tcb_addr + tcb_size - 1)
-            if res:
+            if res := func(tcb_addr) and func(tcb_addr + tcb_size - 1):
                 return True
         return False
 
     def _esp_stack_ptr_in_dram(self, addr):  # type: (int) -> bool
-        return not (addr < self.SOC_DRAM_LOW + 0x10
-                    or addr > self.SOC_DRAM_HIGH - 0x10
-                    or (addr & 0xF) != 0)
+        return (
+            addr >= self.SOC_DRAM_LOW + 0x10
+            and addr <= self.SOC_DRAM_HIGH - 0x10
+            and addr & 0xF == 0
+        )
 
     def stack_is_sane(self, stack_start, stack_end):  # type: (int, int) -> bool
         return (self._esp_stack_ptr_in_dram(stack_start)

@@ -164,9 +164,7 @@ class ElfFile(object):
         if (string_end == -1):
             raise ValueError('Unable to get section name from section header string table')
 
-        name = section_name_str[:string_end].decode('utf-8')
-
-        return name
+        return section_name_str[:string_end].decode('utf-8')
 
     def _generate_struct_from_headers(self, header_tables):  # type: (Container) -> Struct
         """
@@ -241,8 +239,7 @@ class ElfSection(object):
         if self.flags & self.SHF_MASKPROC:
             return 'MS'
 
-        res = 'R'
-        res += 'W' if self.flags & self.SHF_WRITE else ' '
+        res = 'R' + ('W' if self.flags & self.SHF_WRITE else ' ')
         res += 'X' if self.flags & self.SHF_EXECINSTR else ' '
         res += 'A' if self.flags & self.SHF_ALLOC else ' '
         return res
@@ -264,8 +261,7 @@ class ElfSegment(object):
         self.type = ElfFile.PT_LOAD
 
     def attr_str(self):  # type: () -> str
-        res = ''
-        res += 'R' if self.flags & self.PF_R else ' '
+        res = '' + ('R' if self.flags & self.PF_R else ' ')
         res += 'W' if self.flags & self.PF_W else ' '
         res += 'E' if self.flags & self.PF_X else ' '
         return res

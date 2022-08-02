@@ -50,10 +50,8 @@ VERSION2_PRINT = 'V2 - Multipage Blob Support Enabled'
 
 
 def reverse_hexbytes(addr_tmp):
-    addr = []
     reversed_bytes = ''
-    for i in range(0, len(addr_tmp), 2):
-        addr.append(addr_tmp[i:i + 2])
+    addr = [addr_tmp[i:i + 2] for i in range(0, len(addr_tmp), 2)]
     reversed_bytes = ''.join(reversed(addr))
 
     return reversed_bytes
@@ -121,7 +119,7 @@ class Page(object):
         crc_data = bytes(page_header[4:28])
         crc = zlib.crc32(crc_data, 0xFFFFFFFF)
         struct.pack_into('<I', page_header, 28, crc & 0xFFFFFFFF)
-        self.page_buf[0:len(page_header)] = page_header
+        self.page_buf[:len(page_header)] = page_header
 
     def create_bitmap_array(self):
         bitarray = array.array('B')
@@ -148,9 +146,7 @@ class Page(object):
 
         cipher = Cipher(algorithms.AES(encr_key), modes.XTS(tweak), backend=backend)
         encryptor = cipher.encryptor()
-        encrypted_data = encryptor.update(plain_text)
-
-        return encrypted_data
+        return encryptor.update(plain_text)
 
     def encrypt_data(self, data_input, no_of_entries, nvs_obj):
         # Set values needed for encryption and encrypt data byte wise
@@ -173,7 +169,7 @@ class Page(object):
 
         if not isinstance(data_input, bytearray):
             byte_arr = bytearray(b'\xff') * 32
-            byte_arr[0:len(data_input)] = data_input
+            byte_arr[:len(data_input)] = data_input
             data_input = byte_arr
 
         data_input = binascii.hexlify(data_input)
@@ -182,16 +178,13 @@ class Page(object):
         start_idx = 0
         end_idx = start_idx + 64
 
-        for _ in range(0, no_of_entries):
+        for _ in range(no_of_entries):
             # Set tweak value
             offset = entry_no * Page.SINGLE_ENTRY_SIZE
             addr = hex(rel_addr + offset)[2:]
             addr_len = len(addr)
             if addr_len > 2:
-                if not addr_len % 2:
-                    addr_tmp = addr
-                else:
-                    addr_tmp = init_tweak_val + addr
+                addr_tmp = init_tweak_val + addr if addr_len % 2 else addr
                 tweak_tmp = reverse_hexbytes(addr_tmp)
                 tweak_val = tweak_tmp + (init_tweak_val * (tweak_len_needed - (len(tweak_tmp))))
             else:
@@ -217,7 +210,7 @@ class Page(object):
 
         if nvs_obj.encrypt:
             encr_data_ret = self.encrypt_data(data, entrycount,nvs_obj)
-            encr_data[0:len(encr_data_ret)] = encr_data_ret
+            encr_data[:len(encr_data_ret)] = encr_data_ret
             data = encr_data
 
         data_offset = Page.FIRST_ENTRY_OFFSET + (Page.SINGLE_ENTRY_SIZE * self.entry_num)
@@ -226,13 +219,13 @@ class Page(object):
         self.page_buf[start_idx:end_idx]  = data
 
         # Set bitmap array for entries in current page
-        for i in range(0, entrycount):
+        for _ in range(entrycount):
             self.write_bitmaparray()
             self.entry_num += 1
 
     def set_crc_header(self, entry_struct):
         crc_data = bytearray(b'28')
-        crc_data[0:4] = entry_struct[0:4]
+        crc_data[:4] = entry_struct[:4]
         crc_data[4:28] = entry_struct[8:32]
         crc_data = bytes(crc_data)
         crc = zlib.crc32(crc_data, 0xFFFFFFFF)
@@ -255,11 +248,7 @@ class Page(object):
             assert tailroom >= 0, 'Page overflow!!'
 
             # Split the binary data into two and store a chunk of available size onto curr page
-            if tailroom < remaining_size:
-                chunk_size = tailroom
-            else:
-                chunk_size = remaining_size
-
+            chunk_size = tailroom if tailroom < remaining_size else remaining_size
             remaining_size = remaining_size - chunk_size
 
             # Change type of data to BLOB_DATA
@@ -360,14 +349,13 @@ class Page(object):
         # Set size of data
         datalen = len(data)
 
-        if datalen > Page.PAGE_PARAMS['max_old_blob_size']:
-            if self.version == Page.VERSION1:
-                raise InputError(' Input File: Size (%d) exceeds max allowed length `%s` bytes for key `%s`.'
-                                 % (datalen, Page.PAGE_PARAMS['max_old_blob_size'], key))
-            else:
-                if encoding == 'string':
-                    raise InputError(' Input File: Size (%d) exceeds max allowed length `%s` bytes for key `%s`.'
-                                     % (datalen, Page.PAGE_PARAMS['max_old_blob_size'], key))
+        if datalen > Page.PAGE_PARAMS['max_old_blob_size'] and (
+            self.version != Page.VERSION1
+            and encoding == 'string'
+            or self.version == Page.VERSION1
+        ):
+            raise InputError(' Input File: Size (%d) exceeds max allowed length `%s` bytes for key `%s`.'
+                             % (datalen, Page.PAGE_PARAMS['max_old_blob_size'], key))
 
         # Calculate no. of entries data will require
         rounded_size = (datalen + 31) & ~31
@@ -378,7 +366,11 @@ class Page(object):
         if self.entry_num >= Page.PAGE_PARAMS['max_entries']:
             raise PageFullError()
         elif (self.entry_num + total_entry_count) >= Page.PAGE_PARAMS['max_entries']:
-            if not (self.version == Page.VERSION2 and encoding in ['hex2bin', 'binary', 'base64']):
+            if self.version != Page.VERSION2 or encoding not in [
+                'hex2bin',
+                'binary',
+                'base64',
+            ]:
                 raise PageFullError()
 
         # Entry header
@@ -456,7 +448,7 @@ class Page(object):
 
         # Compute CRC
         crc_data = bytearray(b'28')
-        crc_data[0:4] = entry_struct[0:4]
+        crc_data[:4] = entry_struct[:4]
         crc_data[4:28] = entry_struct[8:32]
         crc_data = bytes(crc_data)
         crc = zlib.crc32(crc_data, 0xFFFFFFFF)
@@ -510,7 +502,7 @@ class NVS(object):
     def create_new_page(self, version=None, is_rsrv_page=False):
         # Set previous page state to FULL before creating new page
         if self.pages:
-            curr_page_state = struct.unpack('<I', self.cur_page.page_buf[0:4])[0]
+            curr_page_state = struct.unpack('<I', self.cur_page.page_buf[:4])[0]
             if curr_page_state == Page.ACTIVE:
                 page_state_full_seq = Page.FULL
                 struct.pack_into('<I', self.cur_page.page_buf, 0, page_state_full_seq)
@@ -550,7 +542,7 @@ class NVS(object):
         if encoding == 'hex2bin':
             value = value.strip()
             if len(value) % 2 != 0:
-                raise InputError('%s: Invalid data length. Should be multiple of 2.' % key)
+                raise InputError(f'{key}: Invalid data length. Should be multiple of 2.')
             value = binascii.a2b_hex(value)
 
         if encoding == 'base64':
@@ -578,7 +570,7 @@ class NVS(object):
                 new_page = self.create_new_page()
                 new_page.write_primitive_data(key, int(value), encoding, self.namespace_idx,self)
         else:
-            raise InputError('%s: Unsupported encoding' % encoding)
+            raise InputError(f'{encoding}: Unsupported encoding')
 
     """ Return accumulated data of all pages """
     def get_binary_data(self):
@@ -672,7 +664,7 @@ def check_size(size):
             sys.exit('Size of partition must be multiple of 4096')
 
         # Update size as a page needs to be reserved of size 4KB
-        input_size = input_size - Page.PAGE_PARAMS['max_size']
+        input_size -= Page.PAGE_PARAMS['max_size']
 
         if input_size < (2 * Page.PAGE_PARAMS['max_size']):
             sys.exit('Minimum NVS partition size needed is 0x3000 bytes.')
@@ -688,16 +680,16 @@ def set_target_filepath(outdir, filepath):
     :param outdir: Target output dir to store files
     :param filepath: Path of target file
     '''
-    bin_ext = '.bin'
     # Expand if tilde(~) provided in path
     outdir = os.path.expanduser(outdir)
 
     if filepath:
         key_file_name, ext  = os.path.splitext(filepath)
+        bin_ext = '.bin'
         if not ext:
             filepath = key_file_name + bin_ext
         elif bin_ext not in ext:
-            sys.exit('Error: `%s`. Only `%s` extension allowed.' % (filepath, bin_ext))
+            sys.exit(f'Error: `{filepath}`. Only `{bin_ext}` extension allowed.')
 
     # Create dir if does not exist
     if not (os.path.isdir(outdir)):
@@ -709,7 +701,7 @@ def set_target_filepath(outdir, filepath):
         distutils.dir_util.mkpath(filedir)
 
     if os.path.isabs(filepath):
-        if not outdir == os.getcwd():
+        if outdir != os.getcwd():
             print('\nWarning: `%s` \n\t==> absolute path given so outdir is ignored for this file.' % filepath)
         # Set to empty as outdir is ignored here
         outdir = ''
@@ -726,8 +718,6 @@ def encrypt(args):
     :param args: Command line arguments given
     '''
     key = None
-    bin_ext = '.bin'
-
     check_size(args.size)
     if (args.keygen is False) and (not args.inputkey):
         sys.exit('Error. --keygen or --inputkey argument needed.')
@@ -739,8 +729,10 @@ def encrypt(args):
     if args.inputkey:
         # Check if key file has .bin extension
         filename, ext = os.path.splitext(args.inputkey)
+        bin_ext = '.bin'
+
         if bin_ext not in ext:
-            sys.exit('Error: `%s`. Only `%s` extension allowed.' % (args.inputkey, bin_ext))
+            sys.exit(f'Error: `{args.inputkey}`. Only `{bin_ext}` extension allowed.')
         key = bytearray()
         with open(args.inputkey, 'rb') as key_f:
             key = key_f.read(64)
@@ -767,10 +759,7 @@ def decrypt_data(data_input, decr_key, page_num, entry_no, entry_size):
     addr = hex(rel_addr + offset)[2:]
     addr_len = len(addr)
     if addr_len > 2:
-        if not addr_len % 2:
-            addr_tmp = addr
-        else:
-            addr_tmp = init_tweak_val + addr
+        addr_tmp = init_tweak_val + addr if addr_len % 2 else addr
         tweak_tmp = reverse_hexbytes(addr_tmp)
         tweak_val = tweak_tmp + (init_tweak_val * (tweak_len_needed - (len(tweak_tmp))))
     else:
@@ -785,9 +774,7 @@ def decrypt_data(data_input, decr_key, page_num, entry_no, entry_size):
     tweak = codecs.decode(tweak_val, 'hex')
     cipher = Cipher(algorithms.AES(decr_key), modes.XTS(tweak), backend=backend)
     decryptor = cipher.decryptor()
-    decrypted_data = decryptor.update(plain_text)
-
-    return decrypted_data
+    return decryptor.update(plain_text)
 
 
 def decrypt(args):
@@ -809,7 +796,7 @@ def decrypt(args):
     for filepath in input_files:
         filename, ext = os.path.splitext(filepath)
         if bin_ext not in ext:
-            sys.exit('Error: `%s`. Only `%s` extension allowed.' % (filepath, bin_ext))
+            sys.exit(f'Error: `{filepath}`. Only `{bin_ext}` extension allowed.')
     with open(args.key,'rb') as decr_key_file:
         decr_key = decr_key_file.read(64)
 
@@ -848,11 +835,11 @@ def generate_key(args):
     page_max_size = 4096
     keys_dir = 'keys'
     output_keyfile = None
-    bin_ext = '.bin'
-
     if not args.keyfile:
         timestamp = datetime.datetime.now().strftime('%m-%d_%H-%M')
-        args.keyfile = 'keys-' + timestamp + bin_ext
+        bin_ext = '.bin'
+
+        args.keyfile = f'keys-{timestamp}{bin_ext}'
 
     keys_outdir = os.path.join(args.outdir,keys_dir, '')
     # Create keys/ dir in <outdir> if does not exist
@@ -865,8 +852,8 @@ def generate_key(args):
     key_len = len(encr_key_bytes)
 
     keys_buf = bytearray(b'\xff') * page_max_size
-    keys_buf[0:key_len] = encr_key_bytes
-    crc_data = keys_buf[0:key_len]
+    keys_buf[:key_len] = encr_key_bytes
+    crc_data = keys_buf[:key_len]
     crc_data = bytes(crc_data)
     crc = zlib.crc32(crc_data, 0xFFFFFFFF)
     struct.pack_into('<I', keys_buf, key_len,  crc & 0xFFFFFFFF)
@@ -898,7 +885,7 @@ def generate(args, is_encr_enabled=False, encr_key=None):
     # Check if key file has .bin extension
     filename, ext = os.path.splitext(args.output)
     if bin_ext not in ext:
-        sys.exit('Error: `%s`. Only `.bin` extension allowed.' % args.output)
+        sys.exit(f'Error: `{args.output}`. Only `.bin` extension allowed.')
     args.outdir, args.output = set_target_filepath(args.outdir, args.output)
 
     if is_encr_enabled and not encr_key:
@@ -907,9 +894,7 @@ def generate(args, is_encr_enabled=False, encr_key=None):
     input_file = open(args.input, 'rt', encoding='utf8')
     output_file = open(args.output, 'wb')
 
-    with open(args.input, 'rt', encoding='utf8') as input_file,\
-            open(args.output, 'wb') as output_file,\
-            nvs_open(output_file, input_size, args.version, is_encrypt=is_encr_enabled, key=encr_key) as nvs_obj:
+    with open(args.input, 'rt', encoding='utf8') as input_file, open(args.output, 'wb') as output_file, nvs_open(output_file, input_size, args.version, is_encrypt=is_encr_enabled, key=encr_key) as nvs_obj:
 
         if nvs_obj.version == Page.VERSION1:
             version_set = VERSION1_PRINT
@@ -942,7 +927,7 @@ def generate(args, is_encr_enabled=False, encr_key=None):
             try:
                 # Check key length
                 if len(data['key']) > 15:
-                    raise InputError('Length of key `{}` should be <= 15 characters.'.format(data['key']))
+                    raise InputError(f"Length of key `{data['key']}` should be <= 15 characters.")
                 write_entry(nvs_obj, data['key'], data['type'], data['encoding'], data['value'])
             except InputError as e:
                 print(e)
@@ -950,9 +935,9 @@ def generate(args, is_encr_enabled=False, encr_key=None):
                 if filename:
                     print('\nWarning: NVS binary not created...')
                     os.remove(args.output)
-                if is_dir_new and not filedir == os.getcwd():
-                        print('\nWarning: Output dir not created...')
-                        os.rmdir(filedir)
+                if is_dir_new and filedir != os.getcwd():
+                    print('\nWarning: Output dir not created...')
+                    os.rmdir(filedir)
                 sys.exit(-2)
 
     print('\nCreated NVS binary: ===>', args.output)

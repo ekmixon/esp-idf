@@ -45,7 +45,7 @@ class WsClient:
         self.ws.settimeout(10)
 
     def __enter__(self):  # type: ignore
-        self.ws.connect('wss://{}:{}/ws'.format(self.ip, self.port))
+        self.ws.connect(f'wss://{self.ip}:{self.port}/ws')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):  # type: (type, RuntimeError, TracebackType) -> None
@@ -57,9 +57,7 @@ class WsClient:
     def write(self, data, opcode=OPCODE_TEXT):  # type: (str, int) -> Any
         if opcode == OPCODE_PING:
             return self.ws.ping(data)
-        if opcode == OPCODE_PONG:
-            return self.ws.pong(data)
-        return self.ws.send(data)
+        return self.ws.pong(data) if opcode == OPCODE_PONG else self.ws.send(data)
 
 
 class wss_client_thread(threading.Thread):
@@ -82,10 +80,9 @@ class wss_client_thread(threading.Thread):
 
                     if opcode == OPCODE_PING:
                         ws.write(data=self.data, opcode=OPCODE_PONG)
-                    if opcode == OPCODE_TEXT:
-                        if data == CORRECT_ASYNC_DATA:
-                            self.async_response = True
-                            Utility.console_log('Thread {} obtained correct async message'.format(self.name))
+                    if opcode == OPCODE_TEXT and data == CORRECT_ASYNC_DATA:
+                        self.async_response = True
+                        Utility.console_log(f'Thread {self.name} obtained correct async message')
                     # Keep sending pong to update the keepalive in the server
                     if (time.time() - self.start_time) > 20:
                         break
@@ -126,7 +123,7 @@ def test_examples_protocol_https_wss_server(env, extra_data):  # type: (tiny_tes
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'wss_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('https_wss_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('https_wss_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting wss_server test app')
@@ -137,8 +134,8 @@ def test_examples_protocol_https_wss_server(env, extra_data):  # type: (tiny_tes
     Utility.console_log('Waiting to connect with AP')
     got_ip = dut1.expect(re.compile(r'IPv4 address: (\d+\.\d+\.\d+\.\d+)'), timeout=60)[0]
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     ca_file = os.path.join(os.path.dirname(__file__), 'main', 'certs', 'cacert.pem')
     # Start ws server test
@@ -148,7 +145,7 @@ def test_examples_protocol_https_wss_server(env, extra_data):  # type: (tiny_tes
         dut1.expect('performing session handshake')
         client_fd = dut1.expect(re.compile(r'New client connected (\d+)'), timeout=20)[0]
         ws.write(data=DATA, opcode=OPCODE_TEXT)
-        dut1.expect(re.compile(r'Received packet with message: {}'.format(DATA)))
+        dut1.expect(re.compile(f'Received packet with message: {DATA}'))
         opcode, data = ws.read()
         data = data.decode('UTF-8')
         if data != DATA:
@@ -174,8 +171,8 @@ def test_examples_protocol_https_wss_server(env, extra_data):  # type: (tiny_tes
         # keepalive timeout is 10 seconds so do not respond for (10 + 1) senconds
         Utility.console_log('Testing if client is disconnected if it does not respond for 10s i.e. keep_alive timeout (approx time = 11s)')
         try:
-            dut1.expect('Client not alive, closing fd {}'.format(client_fd), timeout=20)
-            dut1.expect('Client disconnected {}'.format(client_fd))
+            dut1.expect(f'Client not alive, closing fd {client_fd}', timeout=20)
+            dut1.expect(f'Client disconnected {client_fd}')
         except Exception:
             Utility.console_log('ENV_ERROR:Failed the test for keep alive,\nthe connection was not closed after timeout')
 

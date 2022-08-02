@@ -32,8 +32,14 @@ def _load_source(name, path):
 
 
 idf_path = os.environ['IDF_PATH']
-constants_pb2 = _load_source('constants_pb2', idf_path + '/components/protocomm/python/constants_pb2.py')
-local_ctrl_pb2 = _load_source('esp_local_ctrl_pb2', idf_path + '/components/esp_local_ctrl/python/esp_local_ctrl_pb2.py')
+constants_pb2 = _load_source(
+    'constants_pb2', f'{idf_path}/components/protocomm/python/constants_pb2.py'
+)
+
+local_ctrl_pb2 = _load_source(
+    'esp_local_ctrl_pb2',
+    f'{idf_path}/components/esp_local_ctrl/python/esp_local_ctrl_pb2.py',
+)
 
 
 def get_prop_count_request(security_ctx):
@@ -41,8 +47,7 @@ def get_prop_count_request(security_ctx):
     req.msg = local_ctrl_pb2.TypeCmdGetPropertyCount
     payload = local_ctrl_pb2.CmdGetPropertyCount()
     req.cmd_get_prop_count.MergeFrom(payload)
-    enc_cmd = security_ctx.encrypt_data(req.SerializeToString())
-    return enc_cmd
+    return security_ctx.encrypt_data(req.SerializeToString())
 
 
 def get_prop_count_response(security_ctx, response_data):
@@ -61,8 +66,7 @@ def get_prop_vals_request(security_ctx, indices):
     payload = local_ctrl_pb2.CmdGetPropertyValues()
     payload.indices.extend(indices)
     req.cmd_get_prop_vals.MergeFrom(payload)
-    enc_cmd = security_ctx.encrypt_data(req.SerializeToString())
-    return enc_cmd
+    return security_ctx.encrypt_data(req.SerializeToString())
 
 
 def get_prop_vals_response(security_ctx, response_data):
@@ -90,8 +94,7 @@ def set_prop_vals_request(security_ctx, indices, values):
         prop.index = i
         prop.value = v
     req.cmd_set_prop_vals.MergeFrom(payload)
-    enc_cmd = security_ctx.encrypt_data(req.SerializeToString())
-    return enc_cmd
+    return security_ctx.encrypt_data(req.SerializeToString())
 
 
 def set_prop_vals_response(security_ctx, response_data):

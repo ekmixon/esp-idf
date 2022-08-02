@@ -30,7 +30,10 @@ def test_examples_system_light_sleep(env, extra_data):
     # enter sleep second time
     dut.expect(ENTERING_SLEEP_STR)
     groups = dut.expect(EXIT_SLEEP_REGEX)
-    print('Got second sleep period, wakeup from {}, slept for {}'.format(groups[0], groups[2]))
+    print(
+        f'Got second sleep period, wakeup from {groups[0]}, slept for {groups[2]}'
+    )
+
     # sleep time error should be less than 1ms
     assert(groups[0] == 'timer' and int(groups[2]) == WAKEUP_INTERVAL_MS)
 
@@ -40,7 +43,10 @@ def test_examples_system_light_sleep(env, extra_data):
     dut.port_inst.setDTR(True)
     time.sleep(1)
     groups = dut.expect(EXIT_SLEEP_REGEX)
-    print('Got third sleep period, wakeup from {}, slept for {}'.format(groups[0], groups[2]))
+    print(
+        f'Got third sleep period, wakeup from {groups[0]}, slept for {groups[2]}'
+    )
+
     assert(groups[0] == 'pin' and int(groups[2]) < WAKEUP_INTERVAL_MS)
 
     dut.expect(WAITING_FOR_GPIO_STR)

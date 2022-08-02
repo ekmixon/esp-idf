@@ -24,11 +24,13 @@ def test_examples_base_mac_address(env, extra_data):
         '''
         return ', '.join(['0x{}'.format(m) for m in mac_m[:-1]] + [hex(int(mac_m[-1], 16) + increment)])
 
-    dut.expect_all('WIFI_STA MAC: ' + get_expected_mac_string(0),
-                   'SoftAP MAC: ' + get_expected_mac_string(1),
-                   'BT MAC: ' + get_expected_mac_string(2),
-                   'Ethernet MAC: ' + get_expected_mac_string(3),
-                   timeout=10)
+    dut.expect_all(
+        f'WIFI_STA MAC: {get_expected_mac_string(0)}',
+        f'SoftAP MAC: {get_expected_mac_string(1)}',
+        f'BT MAC: {get_expected_mac_string(2)}',
+        f'Ethernet MAC: {get_expected_mac_string(3)}',
+        timeout=10,
+    )
 
 
 if __name__ == '__main__':

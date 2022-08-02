@@ -30,7 +30,7 @@ def get_copyright():
  * SPDX-License-Identifier: Apache-2.0
  */
 '''
-    return copyright_str % datetime.today().year
+    return copyright_str % datetime.now().year
 
 
 def status(msg):
@@ -59,7 +59,7 @@ class FuseTable(list):
             f = os.path.expandvars(f)
             m = re.match(r'(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)', f)
             if m:
-                raise InputError("unknown variable '%s'" % (m.group(1)))
+                raise InputError("unknown variable '%s'" % m[1])
             return f
 
         for line_no in range(len(lines)):
@@ -97,11 +97,11 @@ class FuseTable(list):
 
         # fill group
         names = [p.field_name for p in res]
-        duplicates = set(n for n in names if names.count(n) > 1)
-        if len(duplicates) != 0:
+        duplicates = {n for n in names if names.count(n) > 1}
+        if duplicates:
             i_count = 0
             for p in res:
-                if len(duplicates.intersection([p.field_name])) != 0:
+                if duplicates.intersection([p.field_name]):
                     p.group = str(i_count)
                     i_count += 1
                 else:
@@ -117,17 +117,16 @@ class FuseTable(list):
         # check on duplicate name
         names = [p.field_name for p in self]
         names += [name.replace('.', '_') for name in names if '.' in name]
-        duplicates = set(n for n in names if names.count(n) > 1)
-
-        # print sorted duplicate partitions by name
-        if len(duplicates) != 0:
+        if duplicates := {n for n in names if names.count(n) > 1}:
             fl_error = False
             for p in self:
                 field_name = p.field_name + p.group
-                if field_name != '' and len(duplicates.intersection([field_name])) != 0:
+                if field_name != '' and duplicates.intersection([field_name]):
                     fl_error = True
-                    print('Field at %s, %s, %s, %s have dublicate field_name' %
-                          (p.field_name, p.efuse_block, p.bit_start, p.bit_count))
+                    print(
+                        f'Field at {p.field_name}, {p.efuse_block}, {p.bit_start}, {p.bit_count} have dublicate field_name'
+                    )
+
             if fl_error is True:
                 raise InputError('Field names must be unique')
 
@@ -137,13 +136,16 @@ class FuseTable(list):
             if '.' in p.field_name:
                 name = ''
                 for sub in p.field_name.split('.')[:-1]:
-                    name = sub if name == '' else name + '.' + sub
-                    missed_name = True
-                    for d in self:
-                        if p is not d and p.efuse_block == d.efuse_block and name == d.field_name:
-                            missed_name = False
+                    name = sub if name == '' else f'{name}.{sub}'
+                    missed_name = not any(
+                        p is not d
+                        and p.efuse_block == d.efuse_block
+                        and name == d.field_name
+                        for d in self
+                    )
+
                     if missed_name:
-                        raise InputError('%s is not found' % name)
+                        raise InputError(f'{name} is not found')
 
     def verify(self, type_table=None):
         def check(p, n):
@@ -152,19 +154,16 @@ class FuseTable(list):
             start = p.bit_start
             end = p.bit_start + p.bit_count - 1
             if left <= start <= right:
-                if left <= end <= right:
-                    return 'included in'  # [n  [p...p]  n]
-                return 'intersected with'  # [n  [p..n]..p]
+                return 'included in' if left <= end <= right else 'intersected with'
             if left <= end <= right:
                 return 'intersected with'  # [p..[n..p] n]
-            if start <= left and right <= end:
-                return 'wraps'  # [p  [n...n]  p]
-            return 'ok'  # [p] [n]  or  [n] [p]
+            return 'wraps' if start <= left and right <= end else 'ok'
 
         def print_error(p, n, state):
-            raise InputError('Field at %s, %s, %s, %s  %s  %s, %s, %s, %s' %
-                             (p.field_name, p.efuse_block, p.bit_start, p.bit_count, state,
-                              n.field_name, n.efuse_block, n.bit_start, n.bit_count))
+            raise InputError(
+                f'Field at {p.field_name}, {p.efuse_block}, {p.bit_start}, {p.bit_count}  {state}  {n.field_name}, {n.efuse_block}, {n.bit_start}, {n.bit_count}'
+            )
+
         for p in self:
             p.verify(type_table)
 
@@ -182,7 +181,7 @@ class FuseTable(list):
                         if '.' in p.field_name:
                             name = ''
                             for sub in p.field_name.split('.'):
-                                name = sub if name == '' else name + '.' + sub
+                                name = sub if name == '' else f'{name}.{sub}'
                                 for d in self:
                                     if p is not d and p.efuse_block == d.efuse_block and name == d.field_name:
                                         state = check(p, d)
@@ -197,21 +196,26 @@ class FuseTable(list):
                         print_error(p, n, state)
 
     def calc_md5(self):
-        txt_table = ''
-        for p in self:
-            txt_table += '%s %s %d %s %s' % (p.field_name, p.efuse_block, p.bit_start, str(p.get_bit_count()), p.comment) + '\n'
+        txt_table = ''.join(
+            '%s %s %d %s %s'
+            % (
+                p.field_name,
+                p.efuse_block,
+                p.bit_start,
+                str(p.get_bit_count()),
+                p.comment,
+            )
+            + '\n'
+            for p in self
+        )
+
         self.md5_digest_table = hashlib.md5(txt_table.encode('utf-8')).hexdigest()
 
     def show_range_used_bits(self):
-        # print used and free bits
-        rows = ''
-        rows += 'Sorted efuse table:\n'
-        num = 1
+        rows = '' + 'Sorted efuse table:\n'
         rows += '{0} \t{1:<30} \t{2} \t{3} \t{4}'.format('#', 'field_name', 'efuse_block', 'bit_start', 'bit_count') + '\n'
-        for p in sorted(self, key=lambda x:(x.efuse_block, x.bit_start)):
+        for num, p in enumerate(sorted(self, key=lambda x:(x.efuse_block, x.bit_start)), start=1):
             rows += '{0} \t{1:<30} \t{2} \t{3:^8} \t{4:^8}'.format(num, p.field_name, p.efuse_block, p.bit_start, p.bit_count) + '\n'
-            num += 1
-
         rows += '\nUsed bits in efuse table:\n'
         last = None
         for p in sorted(self, key=lambda x:(x.efuse_block, x.bit_start)):
@@ -233,27 +237,27 @@ class FuseTable(list):
             if p.efuse_block == blk:
                 if p.define is not None:
                     return p.get_bit_count()
-                else:
-                    if last_used_bit < p.bit_start + p.bit_count:
-                        last_used_bit = p.bit_start + p.bit_count
-        if last_used_bit == 0:
-            return None
-        return str(last_used_bit)
+                if last_used_bit < p.bit_start + p.bit_count:
+                    last_used_bit = p.bit_start + p.bit_count
+        return None if last_used_bit == 0 else str(last_used_bit)
 
     def to_header(self, file_name):
         rows = [get_copyright()]
-        rows += ['#ifdef __cplusplus',
-                 'extern "C" {',
-                 '#endif',
-                 '',
-                 '',
-                 '// md5_digest_table ' + self.md5_digest_table,
-                 '// This file was generated from the file ' + file_name + '.csv. DO NOT CHANGE THIS FILE MANUALLY.',
-                 '// If you want to change some fields, you need to change ' + file_name + '.csv file',
-                 '// then run `efuse_common_table` or `efuse_custom_table` command it will generate this file.',
-                 "// To show efuse_table run the command 'show_efuse_table'.",
-                 '',
-                 '']
+        rows += [
+            '#ifdef __cplusplus',
+            'extern "C" {',
+            '#endif',
+            '',
+            '',
+            f'// md5_digest_table {self.md5_digest_table}',
+            f'// This file was generated from the file {file_name}.csv. DO NOT CHANGE THIS FILE MANUALLY.',
+            f'// If you want to change some fields, you need to change {file_name}.csv file',
+            '// then run `efuse_common_table` or `efuse_custom_table` command it will generate this file.',
+            "// To show efuse_table run the command 'show_efuse_table'.",
+            '',
+            '',
+        ]
+
 
         last_field_name = ''
         for p in self:
@@ -270,16 +274,19 @@ class FuseTable(list):
 
     def to_c_file(self, file_name, debug):
         rows = [get_copyright()]
-        rows += ['#include "sdkconfig.h"',
-                 '#include "esp_efuse.h"',
-                 '#include <assert.h>',
-                 '#include "' + file_name + '.h"',
-                 '',
-                 '// md5_digest_table ' + self.md5_digest_table,
-                 '// This file was generated from the file ' + file_name + '.csv. DO NOT CHANGE THIS FILE MANUALLY.',
-                 '// If you want to change some fields, you need to change ' + file_name + '.csv file',
-                 '// then run `efuse_common_table` or `efuse_custom_table` command it will generate this file.',
-                 "// To show efuse_table run the command 'show_efuse_table'."]
+        rows += [
+            '#include "sdkconfig.h"',
+            '#include "esp_efuse.h"',
+            '#include <assert.h>',
+            '#include "' + file_name + '.h"',
+            '',
+            f'// md5_digest_table {self.md5_digest_table}',
+            f'// This file was generated from the file {file_name}.csv. DO NOT CHANGE THIS FILE MANUALLY.',
+            f'// If you want to change some fields, you need to change {file_name}.csv file',
+            '// then run `efuse_common_table` or `efuse_custom_table` command it will generate this file.',
+            "// To show efuse_table run the command 'show_efuse_table'.",
+        ]
+
 
         rows += ['']
 
@@ -294,11 +301,11 @@ class FuseTable(list):
 
             rows += ['// The last free bit in the block is counted over the entire file.']
             if last_free_bit_blk1 is not None:
-                rows += ['#define LAST_FREE_BIT_BLK1 ' + last_free_bit_blk1]
+                rows += [f'#define LAST_FREE_BIT_BLK1 {last_free_bit_blk1}']
             if last_free_bit_blk2 is not None:
-                rows += ['#define LAST_FREE_BIT_BLK2 ' + last_free_bit_blk2]
+                rows += [f'#define LAST_FREE_BIT_BLK2 {last_free_bit_blk2}']
             if last_free_bit_blk3 is not None:
-                rows += ['#define LAST_FREE_BIT_BLK3 ' + last_free_bit_blk3]
+                rows += [f'#define LAST_FREE_BIT_BLK3 {last_free_bit_blk3}']
 
             rows += ['']
 
@@ -321,7 +328,7 @@ class FuseTable(list):
                     rows += ['};\n']
                 rows += ['static const esp_efuse_desc_t ' + p.field_name.replace('.', '_') + '[] = {']
                 last_name = p.field_name
-            rows += [p.to_struct(debug) + ',']
+            rows += [f'{p.to_struct(debug)},']
         rows += ['};\n']
         rows += ['\n\n\n']
 
@@ -333,7 +340,7 @@ class FuseTable(list):
                              '};\n']
                 rows += ['const esp_efuse_desc_t* ' + 'ESP_EFUSE_' + p.field_name.replace('.', '_') + '[] = {']
             last_name = p.field_name
-            index = str(0) if str(p.group) == '' else str(p.group)
+            index = str(p.group) or str(0)
             rows += ['    &' + p.field_name.replace('.', '_') + '[' + index + '],    \t\t// ' + p.comment]
         rows += ['    NULL',
                  '};\n']
@@ -354,7 +361,7 @@ class FuseDefinition(object):
     @classmethod
     def from_csv(cls, line):
         """ Parse a line from the CSV """
-        line_w_defaults = line + ',,,,'  # lazy way to support default fields
+        line_w_defaults = f'{line},,,,'
         fields = [f.strip() for f in line_w_defaults.split(',')]
 
         res = FuseDefinition()
@@ -368,22 +375,19 @@ class FuseDefinition(object):
         return res
 
     def parse_num(self, strval):
-        if strval == '':
-            return None  # Field will fill in default
-        return self.parse_int(strval)
+        return None if strval == '' else self.parse_int(strval)
 
     def parse_bit_count(self, strval):
-        if strval == 'MAX_BLK_LEN':
-            self.define = strval
-            return self.get_max_bits_of_block()
-        else:
+        if strval != 'MAX_BLK_LEN':
             return self.parse_num(strval)
+        self.define = strval
+        return self.get_max_bits_of_block()
 
     def parse_int(self, v):
         try:
             return int(v, 0)
         except ValueError:
-            raise InputError('Invalid field value %s' % v)
+            raise InputError(f'Invalid field value {v}')
 
     def parse_block(self, strval):
         if strval == '':
@@ -391,11 +395,10 @@ class FuseDefinition(object):
         if idf_target == 'esp32':
             if strval not in ['EFUSE_BLK0', 'EFUSE_BLK1', 'EFUSE_BLK2', 'EFUSE_BLK3']:
                 raise InputError("Field 'efuse_block' should be one of EFUSE_BLK0..EFUSE_BLK3")
-        else:
-            if strval not in ['EFUSE_BLK0', 'EFUSE_BLK1', 'EFUSE_BLK2', 'EFUSE_BLK3', 'EFUSE_BLK4',
+        elif strval not in ['EFUSE_BLK0', 'EFUSE_BLK1', 'EFUSE_BLK2', 'EFUSE_BLK3', 'EFUSE_BLK4',
                               'EFUSE_BLK5', 'EFUSE_BLK6', 'EFUSE_BLK7', 'EFUSE_BLK8', 'EFUSE_BLK9',
                               'EFUSE_BLK10']:
-                raise InputError("Field 'efuse_block' should be one of EFUSE_BLK0..EFUSE_BLK10")
+            raise InputError("Field 'efuse_block' should be one of EFUSE_BLK0..EFUSE_BLK10")
 
         return strval
 
@@ -403,10 +406,7 @@ class FuseDefinition(object):
         '''common_table: EFUSE_BLK0, EFUSE_BLK1, EFUSE_BLK2, EFUSE_BLK3
            custom_table: ----------, ----------, ----------, EFUSE_BLK3(some reserved in common_table)
         '''
-        if self.efuse_block == 'EFUSE_BLK0':
-            return 256
-        else:
-            return max_blk_len
+        return 256 if self.efuse_block == 'EFUSE_BLK0' else max_blk_len
 
     def verify(self, type_table):
         if self.efuse_block is None:
@@ -424,16 +424,14 @@ class FuseDefinition(object):
             return self.bit_count
 
     def to_struct(self, debug):
-        start = '    {'
-        if debug is True:
-            start = '    {' + '"' + self.field_name + '" ,'
+        start = '    {' + '"' + self.field_name + '" ,' if debug is True else '    {'
         return ', '.join([start + self.efuse_block,
                          str(self.bit_start),
                          str(self.get_bit_count()) + '}, \t // ' + self.comment])
 
 
 def process_input_file(file, type_table):
-    status('Parsing efuse CSV input file ' + file.name + ' ...')
+    status(f'Parsing efuse CSV input file {file.name} ...')
     input = file.read()
     table = FuseTable.from_csv(input)
     status('Verifying efuse table...')
@@ -454,23 +452,23 @@ def create_output_files(name, output_table, debug):
     file_name = os.path.splitext(os.path.basename(name))[0]
     gen_dir = os.path.dirname(name)
 
-    dir_for_file_h = gen_dir + '/include'
+    dir_for_file_h = f'{gen_dir}/include'
     try:
         os.stat(dir_for_file_h)
     except Exception:
         os.mkdir(dir_for_file_h)
 
-    file_h_path = os.path.join(dir_for_file_h, file_name + '.h')
-    file_c_path = os.path.join(gen_dir, file_name + '.c')
+    file_h_path = os.path.join(dir_for_file_h, f'{file_name}.h')
+    file_c_path = os.path.join(gen_dir, f'{file_name}.c')
 
     # src files are the same
     if ckeck_md5_in_file(output_table.md5_digest_table, file_c_path) is False:
-        status('Creating efuse *.h file ' + file_h_path + ' ...')
+        status(f'Creating efuse *.h file {file_h_path} ...')
         output = output_table.to_header(file_name)
         with open(file_h_path, 'w') as f:
             f.write(output)
 
-        status('Creating efuse *.c file ' + file_c_path + ' ...')
+        status(f'Creating efuse *.c file {file_c_path} ...')
         output = output_table.to_c_file(file_name, debug)
         with open(file_c_path, 'w') as f:
             f.write(output)
@@ -530,7 +528,9 @@ class InputError(RuntimeError):
 
 class ValidationError(InputError):
     def __init__(self, p, message):
-        super(ValidationError, self).__init__('Entry %s invalid: %s' % (p.field_name, message))
+        super(ValidationError, self).__init__(
+            f'Entry {p.field_name} invalid: {message}'
+        )
 
 
 if __name__ == '__main__':

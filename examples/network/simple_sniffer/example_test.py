@@ -27,8 +27,8 @@ def test_examples_simple_sniffer(env, _):  # type: (Any, Any) -> None
     dut.expect(re.compile(r'Minor Version: [0-9]*'))
     dut.expect(re.compile(r'SnapLen: [0-9]*'))
     dut.expect(re.compile(r'LinkType: [0-9]*'))
-    for i in range(0, 10):
-        dut.expect('Packet ' + str(i) + ':')
+    for i in range(10):
+        dut.expect(f'Packet {str(i)}:')
         dut.expect(re.compile(r'Timestamp \(Seconds\): [0-9]*'))
         dut.expect(re.compile(r'Timestamp \(Microseconds\): [0-9]*'))
         dut.expect(re.compile(r'Capture Length: [0-9]*'))

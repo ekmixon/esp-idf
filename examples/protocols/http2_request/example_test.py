@@ -20,13 +20,11 @@ def is_test_server_available():  # type: () -> bool
     conn.request('GET', '/')
     resp = conn.getresponse()
     conn.close()
-    if resp.status == HTTP_OK:
-        return True
-    return False
+    return resp.status == HTTP_OK
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_EthKitV1')
-def test_examples_protocol_http2_request(env, extra_data):  # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
+def test_examples_protocol_http2_request(env, extra_data):    # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
     """
     steps: |
       1. join AP
@@ -38,12 +36,8 @@ def test_examples_protocol_http2_request(env, extra_data):  # type: (tiny_test_f
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'http2_request.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http2_request_bin_size', '{}KB'.format(bin_size // 1024))
-    # start the test
-    # check if test server is avilable
-    test_server_available = is_test_server_available()
-    # Skip the test if the server test server (http2.golang.org) is not available at the moment.
-    if test_server_available:
+    ttfw_idf.log_performance('http2_request_bin_size', f'{bin_size // 1024}KB')
+    if test_server_available := is_test_server_available():
         dut1.start_app()
         # check for connection
         dut1.expect('Connection done', timeout=30)

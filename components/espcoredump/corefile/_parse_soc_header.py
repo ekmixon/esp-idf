@@ -21,23 +21,33 @@ def main():  # type: () -> None
 
     for target in SUPPORTED_TARGETS:
         target_constants = {}
-        soc_header_fp = os.path.join(IDF_PATH, 'components/soc/{}/include/soc/soc.h'.format(target))
-        module_fp = os.path.join(IDF_PATH, 'components', 'espcoredump', 'corefile', 'soc_headers',
-                                 '{}.py'.format(target))
+        soc_header_fp = os.path.join(
+            IDF_PATH, f'components/soc/{target}/include/soc/soc.h'
+        )
+
+        module_fp = os.path.join(
+            IDF_PATH,
+            'components',
+            'espcoredump',
+            'corefile',
+            'soc_headers',
+            f'{target}.py',
+        )
+
 
         with open(soc_header_fp) as fr:
-            for line in fr.readlines():
+            for line in fr:
                 for attr in constants:
-                    if '#define {}'.format(attr) in line:
+                    if f'#define {attr}' in line:
                         target_constants[attr] = literal_eval(line.strip().split()[-1])
 
         for attr in constants:
             if attr not in target_constants:
-                raise ValueError('ERROR: Attr {} is missing in {}'.format(attr, soc_header_fp))
+                raise ValueError(f'ERROR: Attr {attr} is missing in {soc_header_fp}')
 
         with open(module_fp, 'w') as fw:
             for k, v in target_constants.items():
-                fw.write('{} = {}\n'.format(k, hex(v)))
+                fw.write(f'{k} = {hex(v)}\n')
 
 
 if __name__ == '__main__':

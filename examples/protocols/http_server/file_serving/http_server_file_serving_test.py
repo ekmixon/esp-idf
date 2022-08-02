@@ -33,7 +33,7 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'file_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('file_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('file_server_bin_size', f'{bin_size // 1024}KB')
     Utility.console_log('Erasing the flash on the chip')
     # erase the flash
     dut1.erase_flash()
@@ -47,8 +47,8 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     # Expected logs
     dut1.expect('Initializing SPIFFS', timeout=30)
     got_port = dut1.expect(re.compile(r"Starting HTTP Server on port: '(\d+)'"), timeout=30)[0]
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Run test script
     conn = client.start_session(got_ip, got_port)
@@ -60,7 +60,7 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     upload_file_hash = hashlib.md5(upload_data.encode('UTF-8'))
     upload_file_digest = upload_file_hash.digest()
     Utility.console_log('\nTesting the uploading of file on the file server')
-    client.postreq(conn, '/upload/' + str(upload_file_name), upload_data)
+    client.postreq(conn, f'/upload/{upload_file_name}', upload_data)
 
     try:
         dut1.expect('File reception complete', timeout=10)
@@ -72,7 +72,7 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     # Download the uploaded file from the file server
     Utility.console_log("\nTesting for Download of \"existing\" file from the file server")
 
-    download_data = client.getreq(conn, '/' + str(upload_file_name))
+    download_data = client.getreq(conn, f'/{upload_file_name}')
 
     try:
         dut1.expect('File sending complete', timeout=10)
@@ -89,9 +89,9 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
 
     # Upload existing file on the file server
     Utility.console_log("\nTesting the upload of \"already existing\" file on the file server")
-    client.postreq(conn, '/upload/' + str(upload_file_name), data=None)
+    client.postreq(conn, f'/upload/{upload_file_name}', data=None)
     try:
-        dut1.expect('File already exists : /spiffs/' + str(upload_file_name), timeout=10)
+        dut1.expect(f'File already exists : /spiffs/{upload_file_name}', timeout=10)
     except Exception:
         Utility.console_log('Failed the test for uploading existing file on the file server')
         raise
@@ -110,9 +110,9 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     conn = client.start_session(got_ip, got_port)
     # Delete the existing file from the file server
     Utility.console_log("\nTesting the deletion of \"existing\" file on the file server")
-    client.postreq(conn, '/delete/' + str(upload_file_name), data=None)
+    client.postreq(conn, f'/delete/{upload_file_name}', data=None)
     try:
-        dut1.expect('Deleting file : /' + str(upload_file_name), timeout=10)
+        dut1.expect(f'Deleting file : /{upload_file_name}', timeout=10)
     except Exception:
         Utility.console_log('Failed the test for deletion of existing file on the file server')
         raise
@@ -121,9 +121,9 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     conn = client.start_session(got_ip, got_port)
     # Try to delete non existing file from the file server
     Utility.console_log("\nTesting the deletion of \"non existing\" file on the file server")
-    client.postreq(conn, '/delete/' + str(upload_file_name), data=None)
+    client.postreq(conn, f'/delete/{upload_file_name}', data=None)
     try:
-        dut1.expect('File does not exist : /' + str(upload_file_name), timeout=10)
+        dut1.expect(f'File does not exist : /{upload_file_name}', timeout=10)
     except Exception:
         Utility.console_log('Failed the test for deleting non existing file on the file server')
         raise
@@ -133,10 +133,10 @@ def test_examples_protocol_http_server_file_serving(env, extra_data):  # type: (
     # Try to download non existing file from the file server
     Utility.console_log("\nTesting for Download of \"non existing\" file from the file server")
 
-    download_data = client.getreq(conn, '/' + str(upload_file_name))
+    download_data = client.getreq(conn, f'/{upload_file_name}')
 
     try:
-        dut1.expect('Failed to stat file : /spiffs/' + str(upload_file_name), timeout=10)
+        dut1.expect(f'Failed to stat file : /spiffs/{upload_file_name}', timeout=10)
     except Exception:
         Utility.console_log('Failed the test to download non existing file from the file server')
         raise

@@ -34,7 +34,7 @@ def test_examples_provisioning_ble(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'ble_prov.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('ble_prov_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('ble_prov_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     dut1.start_app()

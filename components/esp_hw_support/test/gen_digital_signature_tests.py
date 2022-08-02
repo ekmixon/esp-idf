@@ -50,9 +50,9 @@ NUM_MESSAGES = 10
 NUM_CASES = 6
 
 
-hmac_keys = [os.urandom(32) for x in range(NUM_HMAC_KEYS)]
+hmac_keys = [os.urandom(32) for _ in range(NUM_HMAC_KEYS)]
 
-messages = [random.randrange(0, 1 << 4096) for x in range(NUM_MESSAGES)]
+messages = [random.randrange(0, 1 << 4096) for _ in range(NUM_MESSAGES)]
 
 with open('digital_signature_test_cases.h', 'w') as f:
     f.write('/*\n')
@@ -154,7 +154,7 @@ with open('digital_signature_test_cases.h', 'w') as f:
         mask = (1 << key_size) - 1  # truncate messages if needed
         for m in messages:
             f.write('        // Message %d\n' % messages.index(m))
-            f.write('      %s,' % (number_as_bignum_words(pow(m & mask, Y, M))))
+            f.write(f'      {number_as_bignum_words(pow(m & mask, Y, M))},')
         f.write('     },\n')
         f.write('     },\n')
 

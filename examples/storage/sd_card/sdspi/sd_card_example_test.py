@@ -21,15 +21,17 @@ def test_examples_sd_card(env, extra_data):  # type: (ttfw_idf.Env.Env, None ) -
     speed = dut.expect(re.compile(r'Speed: (\S+)'), timeout=20)[0]
     size = dut.expect(re.compile(r'Size: (\S+)'), timeout=20)[0]
 
-    Utility.console_log('Card {} {} {}MHz {} found'.format(name, _type, speed, size))
+    Utility.console_log(f'Card {name} {_type} {speed}MHz {size} found')
 
-    dut.expect_all('Opening file /sdcard/hello.txt',
-                   'File written',
-                   'Renaming file /sdcard/hello.txt to /sdcard/foo.txt',
-                   'Reading file /sdcard/foo.txt',
-                   "Read from file: 'Hello {}!'".format(name),
-                   'Card unmounted',
-                   timeout=20)
+    dut.expect_all(
+        'Opening file /sdcard/hello.txt',
+        'File written',
+        'Renaming file /sdcard/hello.txt to /sdcard/foo.txt',
+        'Reading file /sdcard/foo.txt',
+        f"Read from file: 'Hello {name}!'",
+        'Card unmounted',
+        timeout=20,
+    )
 
 
 if __name__ == '__main__':

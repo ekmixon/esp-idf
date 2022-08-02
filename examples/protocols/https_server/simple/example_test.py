@@ -91,7 +91,7 @@ success_response = '<h1>Hello Secure World!</h1>'
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_WIFI_Protocols')
-def test_examples_protocol_https_server_simple(env, extra_data):  # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
+def test_examples_protocol_https_server_simple(env, extra_data):    # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
     """
     steps: |
       1. join AP
@@ -102,7 +102,10 @@ def test_examples_protocol_https_server_simple(env, extra_data):  # type: (tiny_
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'https_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('https_server_simple_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        'https_server_simple_bin_size', f'{bin_size // 1024}KB'
+    )
+
     # start test
     dut1.start_app()
     # Parse IP address and port of the server
@@ -113,8 +116,8 @@ def test_examples_protocol_https_server_simple(env, extra_data):  # type: (tiny_
     got_ip = dut1.expect(re.compile(r'IPv4 address: (\d+\.\d+\.\d+\.\d+)'), timeout=30)[0]
     # Expected logs
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     Utility.console_log('Performing GET request over an SSL connection with the server')
 
@@ -152,9 +155,9 @@ def test_examples_protocol_https_server_simple(env, extra_data):  # type: (tiny_
     issuer_name = dut1.expect(re.compile(r'issuer name(.*)'), timeout=5)[0]
     expiry = dut1.expect(re.compile(r'expires on(.*)'), timeout=5)[0]
 
-    Utility.console_log('Serial No.' + serial_number)
-    Utility.console_log('Issuer Name' + issuer_name)
-    Utility.console_log('Expires on' + expiry)
+    Utility.console_log(f'Serial No.{serial_number}')
+    Utility.console_log(f'Issuer Name{issuer_name}')
+    Utility.console_log(f'Expires on{expiry}')
 
     Utility.console_log('Correct response obtained')
     Utility.console_log('SSL connection test successful\nClosing the connection')

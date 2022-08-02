@@ -40,8 +40,6 @@ def blehr_client_task(hr_obj, dut, dut_addr):
     interface = 'hci0'
     ble_devname = 'blehr_sensor_1.0'
     hr_srv_uuid = '180d'
-    hr_char_uuid = '2a37'
-
     # Get BLE client module
     ble_client_obj = lib_ble_client.BLE_Bluez_Client(iface=interface)
 
@@ -72,9 +70,9 @@ def blehr_client_task(hr_obj, dut, dut_addr):
         Retrieve updated value
         Stop Notifications
     '''
-    # Get service if exists
-    service = ble_client_obj.get_service_if_exists(hr_srv_uuid)
-    if service:
+    if service := ble_client_obj.get_service_if_exists(hr_srv_uuid):
+        hr_char_uuid = '2a37'
+
         # Get characteristic if exists
         char = ble_client_obj.get_char_if_exists(hr_char_uuid)
         if not char:
@@ -137,7 +135,7 @@ def test_example_app_ble_hr(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut.app.binary_path, 'blehr.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('blehr_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('blehr_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting blehr simple example test app')

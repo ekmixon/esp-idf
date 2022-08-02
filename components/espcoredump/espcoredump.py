@@ -34,10 +34,7 @@ except ImportError:
     sys.stderr.write('esptool is not found!\n')
     sys.exit(2)
 
-if os.name == 'nt':
-    CLOSE_FDS = False
-else:
-    CLOSE_FDS = True
+CLOSE_FDS = os.name != 'nt'
 
 
 def load_aux_elf(elf_path):  # type: (str) -> str
@@ -104,7 +101,9 @@ def get_gdb_path(target=None):  # type: (Optional[str]) -> str
         return 'xtensa-esp32-elf-gdb'
     if target in RISCV_TARGETS:
         return 'riscv32-esp-elf-gdb'
-    raise ValueError('Invalid value: {}. For now we only support {}'.format(target, SUPPORTED_TARGETS))
+    raise ValueError(
+        f'Invalid value: {target}. For now we only support {SUPPORTED_TARGETS}'
+    )
 
 
 def get_rom_elf_path(target=None):  # type: (Optional[str]) -> str
@@ -114,10 +113,10 @@ def get_rom_elf_path(target=None):  # type: (Optional[str]) -> str
     if target is None:
         target = get_target()
 
-    return '{}_rom.elf'.format(target)
+    return f'{target}_rom.elf'
 
 
-def dbg_corefile():  # type: () -> Optional[list[str]]
+def dbg_corefile():    # type: () -> Optional[list[str]]
     """
     Command to load core dump from file or flash and run GDB debug session with it
     """
@@ -128,20 +127,28 @@ def dbg_corefile():  # type: () -> Optional[list[str]]
     rom_sym_cmd = load_aux_elf(rom_elf_path)
 
     gdb_tool = get_gdb_path(target)
-    p = subprocess.Popen(bufsize=0,
-                         args=[gdb_tool,
-                               '--nw',  # ignore .gdbinit
-                               '--core=%s' % core_elf_path,  # core file,
-                               '-ex', rom_sym_cmd,
-                               args.prog],
-                         stdin=None, stdout=None, stderr=None,
-                         close_fds=CLOSE_FDS)
+    p = subprocess.Popen(
+        bufsize=0,
+        args=[
+            gdb_tool,
+            '--nw',
+            f'--core={core_elf_path}',
+            '-ex',
+            rom_sym_cmd,
+            args.prog,
+        ],
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        close_fds=CLOSE_FDS,
+    )
+
     p.wait()
     print('Done!')
     return temp_files
 
 
-def info_corefile():  # type: () -> Optional[list[str]]
+def info_corefile():    # type: () -> Optional[list[str]]
     """
     Command to load core dump from file or flash and print it's data in user friendly form
     """
@@ -201,7 +208,7 @@ def info_corefile():  # type: () -> Optional[list[str]]
     for thr in threads:
         thr_id = int(thr['id'])
         tcb_addr = gdb.gdb2freertos_thread_id(thr['target-id'])
-        task_index = int(thr_id) - 1
+        task_index = thr_id - 1
         task_name = gdb.get_freertos_task_name(tcb_addr)
         gdb.switch_thread(thr_id)
         print('\n==================== THREAD {} (TCB: 0x{:x}, name: \'{}\') ====================='
@@ -263,19 +270,13 @@ def info_corefile():  # type: () -> Optional[list[str]]
 
     for cs in core_segs:
         # core dump exec segments are from ROM, other are belong to tasks (TCB or stack)
-        if cs.flags & ElfSegment.PF_X:
-            seg_name = 'rom.text'
-        else:
-            seg_name = 'tasks.data'
+        seg_name = 'rom.text' if cs.flags & ElfSegment.PF_X else 'tasks.data'
         print('.coredump.%s 0x%x 0x%x %s' % (seg_name, cs.addr, len(cs.data), cs.attr_str()))
     if args.print_mem:
         print('\n====================== CORE DUMP MEMORY CONTENTS ========================')
         for cs in core_elf.load_segments:
             # core dump exec segments are from ROM, other are belong to tasks (TCB or stack)
-            if cs.flags & ElfSegment.PF_X:
-                seg_name = 'rom.text'
-            else:
-                seg_name = 'tasks.data'
+            seg_name = 'rom.text' if cs.flags & ElfSegment.PF_X else 'tasks.data'
             print('.coredump.%s 0x%x 0x%x %s' % (seg_name, cs.addr, len(cs.data), cs.attr_str()))
             print(gdb.run_cmd('x/%dx 0x%x' % (len(cs.data) // 4, cs.addr)))
 
@@ -288,7 +289,10 @@ def info_corefile():  # type: () -> Optional[list[str]]
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='espcoredump.py v%s - ESP32 Core Dump Utility' % __version__)
+    parser = argparse.ArgumentParser(
+        description=f'espcoredump.py v{__version__} - ESP32 Core Dump Utility'
+    )
+
     parser.add_argument('--chip', default=os.environ.get('ESPTOOL_CHIP', 'auto'),
                         choices=['auto'] + SUPPORTED_TARGETS,
                         help='Target chip type')
@@ -343,7 +347,7 @@ if __name__ == '__main__':
         log_level = logging.DEBUG
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
 
-    print('espcoredump.py v%s' % __version__)
+    print(f'espcoredump.py v{__version__}')
     temp_core_files = None
     try:
         if args.operation == 'info_corefile':

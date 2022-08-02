@@ -40,10 +40,10 @@ assert sys.version_info >= (3, 6, 0), 'Python version too low.'
 
 esp_ds_data_dir = 'esp_ds_data'
 # hmac_key_file is generated when HMAC_KEY is calculated, it is used when burning HMAC_KEY to efuse
-hmac_key_file = esp_ds_data_dir + '/hmac_key.bin'
+hmac_key_file = f'{esp_ds_data_dir}/hmac_key.bin'
 # csv and bin filenames are default filenames for nvs partition files created with this script
-csv_filename = esp_ds_data_dir + '/pre_prov.csv'
-bin_filename = esp_ds_data_dir + '/pre_prov.bin'
+csv_filename = f'{esp_ds_data_dir}/pre_prov.csv'
+bin_filename = f'{esp_ds_data_dir}/pre_prov.bin'
 expected_json_path = os.path.join('build', 'config', 'sdkconfig.json')
 # Targets supported by the script
 supported_targets = {'esp32s2', 'esp32c3', 'esp32s3'}
@@ -56,8 +56,7 @@ supported_key_size = {'esp32s2':[1024, 2048, 3072, 4096], 'esp32c3':[1024, 2048,
 def get_idf_target():
     if os.path.exists(expected_json_path):
         sdkconfig = json.load(open(expected_json_path))
-        idf_target_read = sdkconfig['IDF_TARGET']
-        return idf_target_read
+        return sdkconfig['IDF_TARGET']
     else:
         print('ERROR: IDF_TARGET has not been set for the supported targets,'
               "\nplase execute command \"idf.py set-target {TARGET}\" in the example directory")
@@ -65,9 +64,8 @@ def get_idf_target():
 
 
 def load_privatekey(key_file_path, password=None):
-    key_file = open(key_file_path, 'rb')
-    key = key_file.read()
-    key_file.close()
+    with open(key_file_path, 'rb') as key_file:
+        key = key_file.read()
     return serialization.load_pem_private_key(key, password=password, backend=default_backend())
 
 
@@ -164,17 +162,19 @@ def efuse_summary(args, idf_target):
 # @info
 #       The function makes use of the "espefuse.py" script to burn the HMAC key on the efuse.
 def efuse_burn_key(args, idf_target):
-    # In case of a development (default) usecase we disable the read protection.
-    key_block_status = '--no-read-protect'
-
-    if args.production is True:
-        # Whitespace character will have no additional effect on the command and
-        # read protection will be enabled as the default behaviour of the command
-        key_block_status = ' '
-
-    os.system('python $IDF_PATH/components/esptool_py/esptool/espefuse.py --chip {0} -p {1} burn_key '
-              '{2} {3} HMAC_DOWN_DIGITAL_SIGNATURE {4}'
-              .format((idf_target), (args.port), ('BLOCK_KEY' + str(args.efuse_key_id)), (hmac_key_file), (key_block_status)))
+    key_block_status = ' ' if args.production is True else '--no-read-protect'
+    os.system(
+        (
+            'python $IDF_PATH/components/esptool_py/esptool/espefuse.py --chip {0} -p {1} burn_key '
+            '{2} {3} HMAC_DOWN_DIGITAL_SIGNATURE {4}'.format(
+                idf_target,
+                args.port,
+                f'BLOCK_KEY{str(args.efuse_key_id)}',
+                hmac_key_file,
+                key_block_status,
+            )
+        )
+    )
 
 
 # @info
@@ -245,8 +245,8 @@ def get_efuse_summary_json(args, idf_target):
 #       If the key_block already contains a key the function reads the key from the efuse key_block
 def configure_efuse_key_block(args, idf_target):
     efuse_summary_json = get_efuse_summary_json(args, idf_target)
-    key_blk = 'BLOCK_KEY' + str(args.efuse_key_id)
-    key_purpose = 'KEY_PURPOSE_' + str(args.efuse_key_id)
+    key_blk = f'BLOCK_KEY{str(args.efuse_key_id)}'
+    key_purpose = f'KEY_PURPOSE_{str(args.efuse_key_id)}'
 
     kb_writeable = efuse_summary_json[key_blk]['writeable']
     kb_readable = efuse_summary_json[key_blk]['readable']
@@ -275,27 +275,23 @@ def configure_efuse_key_block(args, idf_target):
             print('ERROR: Failed to burn the hmac key to efuse (KEY BLOCK %1d),'
                   '\nPlease execute the script again using a different key id' % (args.efuse_key_id))
             return None
-    else:
-        # If the efuse key block is redable, then read the key from efuse block and use it for encrypting the RSA private key parameters.
-        # If the efuse key block is not redable or it has key purpose set to a different
-        # value than "HMAC_DOWN_DIGITAL_SIGNATURE" then we cannot use it for DS operation
-        if kb_readable is True:
-            if efuse_summary_json[key_purpose]['value'] == 'HMAC_DOWN_DIGITAL_SIGNATURE':
-                print('Provided efuse key block (KEY BLOCK %1d) already contains a key with key_purpose=HMAC_DOWN_DIGITAL_SIGNATURE,'
-                      '\nusing the same key for encrypting the private key data...\n' % (args.efuse_key_id))
-                hmac_key_read = efuse_summary_json[key_blk]['value']
-                hmac_key_read = bytes.fromhex(hmac_key_read)
-                if args.keep_ds_data is True:
-                    with open(hmac_key_file, 'wb') as key_file:
-                        key_file.write(hmac_key_read)
-            else:
-                print('ERROR: Provided efuse key block ((KEY BLOCK %1d)) contains a key with key purpose different'
-                      'than HMAC_DOWN_DIGITAL_SIGNATURE,\nplease execute the script again with a different value of the efuse key id.' % (args.efuse_key_id))
-                return None
+    elif kb_readable is True:
+        if efuse_summary_json[key_purpose]['value'] == 'HMAC_DOWN_DIGITAL_SIGNATURE':
+            print('Provided efuse key block (KEY BLOCK %1d) already contains a key with key_purpose=HMAC_DOWN_DIGITAL_SIGNATURE,'
+                  '\nusing the same key for encrypting the private key data...\n' % (args.efuse_key_id))
+            hmac_key_read = efuse_summary_json[key_blk]['value']
+            hmac_key_read = bytes.fromhex(hmac_key_read)
+            if args.keep_ds_data is True:
+                with open(hmac_key_file, 'wb') as key_file:
+                    key_file.write(hmac_key_read)
         else:
-            print('ERROR: Provided efuse key block (KEY BLOCK %1d) is not readable and writeable,'
-                  '\nplease execute the script again with a different value of the efuse key id.' % (args.efuse_key_id))
+            print('ERROR: Provided efuse key block ((KEY BLOCK %1d)) contains a key with key purpose different'
+                  'than HMAC_DOWN_DIGITAL_SIGNATURE,\nplease execute the script again with a different value of the efuse key id.' % (args.efuse_key_id))
             return None
+    else:
+        print('ERROR: Provided efuse key block (KEY BLOCK %1d) is not readable and writeable,'
+              '\nplease execute the script again with a different value of the efuse key id.' % (args.efuse_key_id))
+        return None
 
     # Return the hmac key read from the efuse
     return hmac_key_read
@@ -361,7 +357,7 @@ def main():
     idf_target = get_idf_target()
     if idf_target not in supported_targets:
         if idf_target is not None:
-            print('ERROR: The script does not support the target %s' % idf_target)
+            print(f'ERROR: The script does not support the target {idf_target}')
         sys.exit(-1)
     idf_target = str(idf_target)
 

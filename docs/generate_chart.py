@@ -198,7 +198,7 @@ class ChartVersions(object):
                    bbox_to_anchor=(1.01, 1.165), loc='upper right')
         fig.set_size_inches(11, 5, forward=True)
         plt.savefig(output_chart_name + output_chart_extension, bbox_inches='tight')
-        print('Saved into ' + output_chart_name + output_chart_extension)
+        print(f'Saved into {output_chart_name}{output_chart_extension}')
 
 
 if __name__ == '__main__':
@@ -212,5 +212,9 @@ if __name__ == '__main__':
     arg_parser.add_argument('--output-file', help='Set the name of the output file.', default='docs/chart')
     args = arg_parser.parse_args()
 
-    ChartVersions(url=args.url if args.filename is None else None, filename=args.filename).create_chart(
-        output_chart_extension='.' + args.output_format.lower()[-3:], output_chart_name=args.output_file)
+    ChartVersions(
+        url=args.url if args.filename is None else None, filename=args.filename
+    ).create_chart(
+        output_chart_extension=f'.{args.output_format.lower()[-3:]}',
+        output_chart_name=args.output_file,
+    )

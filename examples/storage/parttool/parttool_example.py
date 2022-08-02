@@ -34,7 +34,7 @@ def assert_file_same(file1, file2, err):
             else:
                 f1 = f1[:len(f2)]
 
-            if not f1 == f2:
+            if f1 != f2:
                 raise Exception(err)
 
 

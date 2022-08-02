@@ -15,14 +15,17 @@ def test_examples_nvs_rw_value_cxx(env, extra_data):
     dut.start_app()
 
     for i, counter_state in zip_longest(range(4), ('The value is not initialized yet!', ), fillvalue='Done'):
-        dut.expect_all('Opening Non-Volatile Storage (NVS) handle... Done',
-                       'Reading restart counter from NVS ... {}'.format(counter_state),
-                       'Restart counter = {}'.format(i) if i > 0 else '',
-                       'Updating restart counter in NVS ... Done',
-                       'Committing updates in NVS ... Done',
-                       'Restarting in 10 seconds...',
-                       timeout=20)
-        Utility.console_log('loop {} has finished'.format(i))
+        dut.expect_all(
+            'Opening Non-Volatile Storage (NVS) handle... Done',
+            f'Reading restart counter from NVS ... {counter_state}',
+            f'Restart counter = {i}' if i > 0 else '',
+            'Updating restart counter in NVS ... Done',
+            'Committing updates in NVS ... Done',
+            'Restarting in 10 seconds...',
+            timeout=20,
+        )
+
+        Utility.console_log(f'loop {i} has finished')
 
 
 if __name__ == '__main__':

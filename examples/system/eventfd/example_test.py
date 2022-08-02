@@ -21,7 +21,7 @@ def test_examples_eventfd(env, extra_data):
         'eventfd_example: Progress triggerred for 3 times',
     ]
 
-    Utility.console_log('Expecting:{}{}'.format(os.linesep, os.linesep.join(exp_list)))
+    Utility.console_log(f'Expecting:{os.linesep}{os.linesep.join(exp_list)}')
     dut.expect_all(*exp_list, timeout=60)
 
 

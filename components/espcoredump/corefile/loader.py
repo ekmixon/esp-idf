@@ -153,7 +153,7 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
         self.temp_files.append(t.name)
         return t.name
 
-    def _load_core_src(self):  # type: () -> str
+    def _load_core_src(self):    # type: () -> str
         """
         Write core elf into ``self.core_src``,
         Return the target str by reading core elf
@@ -163,7 +163,12 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
 
         _header = EspCoreDumpV1Header.parse(coredump_bytes)  # first we use V1 format to get version
         self.set_version(_header.ver)
-        if self.dump_ver == self.ELF_CRC32:
+        if (
+            self.dump_ver == self.ELF_CRC32
+            or self.dump_ver != self.ELF_SHA256
+            and self.dump_ver != self.BIN_V1
+            and self.dump_ver == self.BIN_V2
+        ):
             self.checksum_struct = CRC
             self.header_struct = EspCoreDumpV2Header
         elif self.dump_ver == self.ELF_SHA256:
@@ -172,9 +177,6 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
         elif self.dump_ver == self.BIN_V1:
             self.checksum_struct = CRC
             self.header_struct = EspCoreDumpV1Header
-        elif self.dump_ver == self.BIN_V2:
-            self.checksum_struct = CRC
-            self.header_struct = EspCoreDumpV2Header
         else:
             raise ESPCoreDumpLoaderError('Core dump version "0x%x" is not supported!' % self.dump_ver)
 
@@ -189,20 +191,19 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
         if self.header_struct != EspCoreDumpV1Header:
             self.header = EspCoreDumpV2Header.parse(coredump_bytes)
 
-        if self.chip_ver in self.COREDUMP_SUPPORTED_TARGETS:
-            if self.chip_ver == self.ESP32:
-                self.target_methods = Esp32Methods()  # type: ignore
-            elif self.chip_ver == self.ESP32S2:
-                self.target_methods = Esp32S2Methods()  # type: ignore
-            elif self.chip_ver == self.ESP32C3:
-                self.target_methods = Esp32c3Methods()  # type: ignore
-            elif self.chip_ver == self.ESP32S3:
-                self.target_methods = Esp32S3Methods()  # type: ignore
-            else:
-                raise NotImplementedError
-        else:
+        if self.chip_ver not in self.COREDUMP_SUPPORTED_TARGETS:
             raise ESPCoreDumpLoaderError('Core dump chip "0x%x" is not supported!' % self.chip_ver)
 
+        if self.chip_ver == self.ESP32:
+            self.target_methods = Esp32Methods()  # type: ignore
+        elif self.chip_ver == self.ESP32S2:
+            self.target_methods = Esp32S2Methods()  # type: ignore
+        elif self.chip_ver == self.ESP32C3:
+            self.target_methods = Esp32c3Methods()  # type: ignore
+        elif self.chip_ver == self.ESP32S3:
+            self.target_methods = Esp32S3Methods()  # type: ignore
+        else:
+            raise NotImplementedError
         return self.target_methods.TARGET  # type: ignore
 
     def _validate_dump_file(self):  # type: () -> None
@@ -228,8 +229,9 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
         data_sha256_str = data_sha256.hexdigest()
         sha256_str = binascii.hexlify(self.core_src.checksum).decode('ascii')  # type: ignore
         if data_sha256_str != sha256_str:
-            raise ESPCoreDumpLoaderError('Invalid core dump SHA256 "{}", should be "{}"'
-                                         .format(data_sha256_str, sha256_str))
+            raise ESPCoreDumpLoaderError(
+                f'Invalid core dump SHA256 "{data_sha256_str}", should be "{sha256_str}"'
+            )
 
     def create_corefile(self, exe_name=None, e_machine=ESPCoreDumpElfFile.EM_XTENSA):
         # type: (Optional[str], int) -> None
@@ -248,7 +250,7 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
         else:
             raise NotImplementedError
 
-    def _extract_elf_corefile(self, exe_name=None, e_machine=ESPCoreDumpElfFile.EM_XTENSA):  # type: (str, int) -> None
+    def _extract_elf_corefile(self, exe_name=None, e_machine=ESPCoreDumpElfFile.EM_XTENSA):    # type: (str, int) -> None
         """
         Reads the ELF formatted core dump image and parse it
         """
@@ -262,8 +264,8 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
             for note_sec in seg.note_secs:
                 # Check for version info note
                 if note_sec.name == 'ESP_CORE_DUMP_INFO' \
-                        and note_sec.type == ESPCoreDumpElfFile.PT_INFO \
-                        and exe_name:
+                            and note_sec.type == ESPCoreDumpElfFile.PT_INFO \
+                            and exe_name:
                     exe_elf = ElfFile(exe_name)
                     app_sha256 = binascii.hexlify(exe_elf.sha256)
                     coredump_sha256_struct = Struct(
@@ -277,14 +279,12 @@ class EspCoreDumpLoader(EspCoreDumpVersion):
                             .format(coredump_sha256, app_sha256))
                     if coredump_sha256.ver != self.version:
                         raise ESPCoreDumpLoaderError(
-                            'Invalid application image for coredump: coredump SHA256 version({}) != app SHA256 version({}).'
-                            .format(coredump_sha256.ver, self.version))
+                            f'Invalid application image for coredump: coredump SHA256 version({coredump_sha256.ver}) != app SHA256 version({self.version}).'
+                        )
 
     @staticmethod
     def _get_aligned_size(size, align_with=4):  # type: (int, int) -> int
-        if size % align_with:
-            return align_with * (size // align_with + 1)
-        return size
+        return align_with * (size // align_with + 1) if size % align_with else size
 
     @staticmethod
     def _build_note_section(name, sec_type, desc):  # type: (str, int, str) -> bytes
@@ -454,7 +454,7 @@ class ESPCoreDumpFlashLoader(EspCoreDumpLoader):
                 logging.info(e.output)
             logging.error('Error during the subprocess execution')
 
-    def _invoke_esptool(self, off=None, target=None):  # type: (Optional[int], Optional[str]) -> None
+    def _invoke_esptool(self, off=None, target=None):    # type: (Optional[int], Optional[str]) -> None
         """
         Loads core dump from flash using elftool
         """
@@ -480,22 +480,21 @@ class ESPCoreDumpFlashLoader(EspCoreDumpLoader):
             tool_args.extend(['read_flash', str(off), str(EspCoreDumpV1Header.sizeof())])
             tool_args.append(self.core_src_file)  # type: ignore
 
-            # read core dump length
-            et_out = subprocess.check_output(tool_args)
-            if et_out:
+            if et_out := subprocess.check_output(tool_args):
                 logging.info(et_out.decode('utf-8'))
 
             header = EspCoreDumpV1Header.parse(open(self.core_src_file, 'rb').read())  # type: ignore
             if not header or not 0 < header.tot_len <= part_size:
-                logging.error('Incorrect size of core dump image: {}, use partition size instead: {}'
-                              .format(header.tot_len, part_size))
+                logging.error(
+                    f'Incorrect size of core dump image: {header.tot_len}, use partition size instead: {part_size}'
+                )
+
                 coredump_len = part_size
             else:
                 coredump_len = header.tot_len
             # set actual size of core dump image and read it from flash
             tool_args[-2] = str(coredump_len)
-            et_out = subprocess.check_output(tool_args)
-            if et_out:
+            if et_out := subprocess.check_output(tool_args):
                 logging.info(et_out.decode('utf-8'))
         except subprocess.CalledProcessError as e:
             logging.error('esptool script execution failed with err %d', e.returncode)
@@ -504,7 +503,7 @@ class ESPCoreDumpFlashLoader(EspCoreDumpLoader):
             logging.debug(e.output)
             raise e
 
-    def _invoke_parttool(self):  # type: () -> None
+    def _invoke_parttool(self):    # type: () -> None
         """
         Loads core dump from flash using parttool
         """
@@ -516,9 +515,7 @@ class ESPCoreDumpFlashLoader(EspCoreDumpLoader):
         self.core_src_file = self._create_temp_file()
         try:
             tool_args.append(self.core_src_file)  # type: ignore
-            # read core dump partition
-            et_out = subprocess.check_output(tool_args)
-            if et_out:
+            if et_out := subprocess.check_output(tool_args):
                 logging.info(et_out.decode('utf-8'))
         except subprocess.CalledProcessError as e:
             logging.error('parttool script execution failed with err %d', e.returncode)

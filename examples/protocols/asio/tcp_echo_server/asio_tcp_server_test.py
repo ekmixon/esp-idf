@@ -20,7 +20,10 @@ def test_examples_protocol_asio_tcp_server(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'asio_tcp_echo_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('asio_tcp_echo_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        'asio_tcp_echo_server_bin_size', f'{bin_size // 1024}KB'
+    )
+
     # 1. start test
     dut1.start_app()
     # 2. get the server IP address
@@ -35,10 +38,12 @@ def test_examples_protocol_asio_tcp_server(env, extra_data):
     # 4. check the message received back from the server
     if (data == test_msg):
         print('PASS: Received correct message')
-        pass
     else:
         print('Failure!')
-        raise ValueError('Wrong data received from asi tcp server: {} (expected:{})'.format(data, test_msg))
+        raise ValueError(
+            f'Wrong data received from asi tcp server: {data} (expected:{test_msg})'
+        )
+
     # 5. check the client message appears also on server terminal
     dut1.expect(test_msg.decode())
 

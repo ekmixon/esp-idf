@@ -19,10 +19,10 @@ def test_examples_asio_chat(env, _):  # type: (ttfw_idf.TinyFW.Env, None) -> Non
     dut = env.get_dut('asio_chat', 'examples/protocols/asio/asio_chat')
     # start the test and expect the client to receive back it's original data
     dut.start_app()
-    dut.expect(re.compile(r'{}'.format('Waiting for input')), timeout=30)
+    dut.expect(re.compile('Waiting for input'), timeout=30)
     dut.write(msg)
     dut.write('exit')
-    dut.expect(re.compile(r'{}'.format(msg)), timeout=30)
+    dut.expect(re.compile(f'{msg}'), timeout=30)
 
 
 if __name__ == '__main__':

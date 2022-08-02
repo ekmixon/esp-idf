@@ -22,7 +22,7 @@ def get_my_ip():
 
 def mqqt_server_sketch(my_ip, port):
     global msgid
-    print('Starting the server on {}'.format(my_ip))
+    print(f'Starting the server on {my_ip}')
     s = None
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,19 +33,20 @@ def mqqt_server_sketch(my_ip, port):
         q.settimeout(30)
         print('connection accepted')
     except Exception:
-        print('Local server on {}:{} listening/accepting failure: {}'
-              'Possibly check permissions or firewall settings'
-              'to accept connections on this address'.format(my_ip, port, sys.exc_info()[0]))
+        print(
+            f'Local server on {my_ip}:{port} listening/accepting failure: {sys.exc_info()[0]}Possibly check permissions or firewall settingsto accept connections on this address'
+        )
+
         raise
     data = q.recv(1024)
     # check if received initial empty message
-    print('received from client {}'.format(data))
+    print(f'received from client {data}')
     data = bytearray([0x20, 0x02, 0x00, 0x00])
     q.send(data)
     # try to receive qos1
     data = q.recv(1024)
     msgid = struct.unpack('>H', data[15:17])[0]
-    print('received from client {}, msgid: {}'.format(data, msgid))
+    print(f'received from client {data}, msgid: {msgid}')
     data = bytearray([0x40, 0x02, data[15], data[16]])
     q.send(data)
     time.sleep(5)
@@ -67,7 +68,7 @@ def test_examples_protocol_mqtt_qos1(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'mqtt_tcp.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('mqtt_tcp_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('mqtt_tcp_bin_size', f'{bin_size // 1024}KB')
     # 1. start mqtt broker sketch
     host_ip = get_my_ip()
     thread1 = Thread(target=mqqt_server_sketch, args=(host_ip,1883))
@@ -77,14 +78,14 @@ def test_examples_protocol_mqtt_qos1(env, extra_data):
     # waiting for getting the IP address
     try:
         ip_address = dut1.expect(re.compile(r' sta ip: ([^,]+),'), timeout=30)
-        print('Connected to AP with IP: {}'.format(ip_address))
+        print(f'Connected to AP with IP: {ip_address}')
     except DUT.ExpectTimeout:
         raise ValueError('ENV_TEST_FAILURE: Cannot connect to AP')
 
-    print('writing to device: {}'.format('mqtt://' + host_ip + '\n'))
-    dut1.write('mqtt://' + host_ip + '\n')
+    print('writing to device: {}'.format(f'mqtt://{host_ip}' + '\n'))
+    dut1.write(f'mqtt://{host_ip}' + '\n')
     thread1.join()
-    print('Message id received from server: {}'.format(msgid))
+    print(f'Message id received from server: {msgid}')
     # 3. check the message id was enqueued and then deleted
     msgid_enqueued = dut1.expect(re.compile(r'OUTBOX: ENQUEUE msgid=([0-9]+)'), timeout=30)
     msgid_deleted = dut1.expect(re.compile(r'OUTBOX: DELETED msgid=([0-9]+)'), timeout=30)
@@ -93,7 +94,9 @@ def test_examples_protocol_mqtt_qos1(env, extra_data):
         print('PASS: Received correct msg id')
     else:
         print('Failure!')
-        raise ValueError('Mismatch of msgid: received: {}, enqueued {}, deleted {}'.format(msgid, msgid_enqueued, msgid_deleted))
+        raise ValueError(
+            f'Mismatch of msgid: received: {msgid}, enqueued {msgid_enqueued}, deleted {msgid_deleted}'
+        )
 
 
 if __name__ == '__main__':

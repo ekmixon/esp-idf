@@ -75,26 +75,26 @@ class CertificateBundle:
             found |= self.add_from_file(os.path.join(crts_path, file_path))
 
         if found is False:
-            raise InputError('No valid x509 certificates found in %s' % crts_path)
+            raise InputError(f'No valid x509 certificates found in {crts_path}')
 
     def add_from_file(self, file_path):
         try:
             if file_path.endswith('.pem'):
-                status('Parsing certificates from %s' % file_path)
+                status(f'Parsing certificates from {file_path}')
                 with open(file_path, 'r', encoding='utf-8') as f:
                     crt_str = f.read()
                     self.add_from_pem(crt_str)
                     return True
 
             elif file_path.endswith('.der'):
-                status('Parsing certificates from %s' % file_path)
+                status(f'Parsing certificates from {file_path}')
                 with open(file_path, 'rb') as f:
                     crt_str = f.read()
                     self.add_from_der(crt_str)
                     return True
 
         except ValueError:
-            critical('Invalid certificate in %s' % file_path)
+            critical(f'Invalid certificate in {file_path}')
             raise InputError('Invalid certificate')
 
         return False
@@ -162,7 +162,7 @@ class CertificateBundle:
             for row in csv_reader:
                 filter_set.add(row[1])
 
-        status('Parsing certificates from %s' % crts_path)
+        status(f'Parsing certificates from {crts_path}')
         crt_str = []
         with open(crts_path, 'r', encoding='utf-8') as f:
             crt_str = f.read()
@@ -170,11 +170,7 @@ class CertificateBundle:
             # Split all certs into a list of (name, certificate string) tuples
             pem_crts = re.findall(r'(^.+?)\n(=+\n[\s\S]+?END CERTIFICATE-----\n)', crt_str, re.MULTILINE)
 
-            filtered_crts = ''
-            for name, crt in pem_crts:
-                if name in filter_set:
-                    filtered_crts += crt
-
+            filtered_crts = ''.join(crt for name, crt in pem_crts if name in filter_set)
         self.add_from_pem(filtered_crts)
 
 
@@ -209,7 +205,7 @@ def main():
         elif os.path.isdir(path):
             bundle.add_from_path(path)
         else:
-            raise InputError('Invalid --input=%s, is neither file nor folder' % args.input)
+            raise InputError(f'Invalid --input={args.input}, is neither file nor folder')
 
     status('Successfully added %d certificates in total' % len(bundle.certificates))
 

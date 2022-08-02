@@ -12,7 +12,7 @@ from tiny_test_fw import Utility
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_EthKitV1')
-def test_examples_protocol_https_mbedtls(env, extra_data):  # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
+def test_examples_protocol_https_mbedtls(env, extra_data):    # type: (tiny_test_fw.Env.Env, None) -> None # pylint: disable=unused-argument
     """
     steps: |
       1. join AP
@@ -24,7 +24,7 @@ def test_examples_protocol_https_mbedtls(env, extra_data):  # type: (tiny_test_f
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'https_mbedtls.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('https_mbedtls_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('https_mbedtls_bin_size', f'{bin_size // 1024}KB')
     # start test
     dut1.start_app()
     dut1.expect('Connected.', timeout=30)
@@ -36,11 +36,10 @@ def test_examples_protocol_https_mbedtls(env, extra_data):  # type: (tiny_test_f
     dut1.expect('Reading HTTP response...')
     dut1.expect(re.compile(r'Completed (\d) requests'))
 
-    # Read free heap size
-    res = dut1.expect(ttfw_idf.MINIMUM_FREE_HEAP_SIZE_RE)
-    if not res:
+    if res := dut1.expect(ttfw_idf.MINIMUM_FREE_HEAP_SIZE_RE):
+        ttfw_idf.print_heap_size(app_name, dut1.app.config_name, dut1.TARGET, res[0])
+    else:
         raise ValueError('Maximum heap size info not found')
-    ttfw_idf.print_heap_size(app_name, dut1.app.config_name, dut1.TARGET, res[0])
 
 
 if __name__ == '__main__':

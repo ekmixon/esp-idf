@@ -48,9 +48,9 @@ def _file_size(f):   # type: (IO) -> int
 
 def _fail(msg):   # type: (str) -> None
     if allow_failures:
-        print('Warning: {}'.format(msg))
+        print(f'Warning: {msg}')
     else:
-        raise SystemExit('Error: {}'.format(msg))
+        raise SystemExit(f'Error: {msg}')
 
 
 def check_bootloader(partition_table_offset, bootloader_offset, binary_file):  # type: (int, int, IO) -> None
@@ -74,12 +74,15 @@ def check_partition(ptype, subtype, partition_table_file, bin_file):  # type: (s
     partitions = [p for p in table if p.type == ptype]
 
     if subtype is not None:
-        ptype_str += ' ({})'.format(subtype)
+        ptype_str += f' ({subtype})'
         subtype = get_subtype_as_int(ptype, subtype)
         partitions = [p for p in partitions if p.subtype == subtype]
 
-    if len(partitions) == 0:
-        print('WARNING: Partition table does not contain any partitions matching {}'.format(ptype_str))
+    if not partitions:
+        print(
+            f'WARNING: Partition table does not contain any partitions matching {ptype_str}'
+        )
+
         return
 
     bin_name = os.path.basename(bin_file.name)
@@ -93,19 +96,20 @@ def check_partition(ptype, subtype, partition_table_file, bin_file):  # type: (s
 
     too_small_partitions = [p for p in partitions if p.size < bin_size]
     if len(partitions) == 1:
-        msg = '{} partition is'.format(ptype_str)
+        msg = f'{ptype_str} partition is'
     elif len(partitions) == len(too_small_partitions):
-        msg = 'All {} partitions are'.format(ptype_str)
+        msg = f'All {ptype_str} partitions are'
     else:
-        msg = '{}/{} {} partitions are'.format(len(too_small_partitions), len(partitions), ptype_str)
+        msg = f'{len(too_small_partitions)}/{len(partitions)} {ptype_str} partitions are'
+
     msg += ' too small for binary {} size {:#x}:'.format(bin_name, bin_size)
     for p in too_small_partitions:
         msg += '\n  - {} (overflow {:#x})'.format(p, bin_size - p.size)
     if not allow_failures and len(partitions) == len(too_small_partitions):
         # if some partitions can fit the binary then just print a warning
-        raise SystemExit('Error: ' + msg)
+        raise SystemExit(f'Error: {msg}')
     else:
-        print('Warning: ' + msg)
+        print(f'Warning: {msg}')
 
 
 def main():  # type: () -> None

@@ -39,7 +39,7 @@ def test_examples_protocol_http_server_persistence(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'persistent_sockets.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('http_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting http_server persistance test app')
@@ -50,33 +50,30 @@ def test_examples_protocol_http_server_persistence(env, extra_data):
     got_ip = dut1.expect(re.compile(r'(?:[\s\S]*)IPv4 address: (\d+.\d+.\d+.\d+)'), timeout=30)[0]
     got_port = dut1.expect(re.compile(r"(?:[\s\S]*)Starting server on port: '(\d+)'"), timeout=30)[0]
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Expected Logs
     dut1.expect('Registering URI handlers', timeout=30)
 
     # Run test script
     conn = client.start_session(got_ip, got_port)
-    visitor = 0
-    adder = 0
-
     # Test PUT request and initialize session context
     num = random.randint(0,100)
     client.putreq(conn, '/adder', str(num))
-    visitor += 1
-    dut1.expect('/adder visitor count = ' + str(visitor), timeout=30)
-    dut1.expect('/adder PUT handler read ' + str(num), timeout=30)
+    visitor = 0 + 1
+    dut1.expect(f'/adder visitor count = {visitor}', timeout=30)
+    dut1.expect(f'/adder PUT handler read {num}', timeout=30)
     dut1.expect('PUT allocating new session', timeout=30)
 
     # Retest PUT request and change session context value
     num = random.randint(0,100)
-    Utility.console_log('Adding: ' + str(num))
+    Utility.console_log(f'Adding: {num}')
     client.putreq(conn, '/adder', str(num))
     visitor += 1
-    adder += num
-    dut1.expect('/adder visitor count = ' + str(visitor), timeout=30)
-    dut1.expect('/adder PUT handler read ' + str(num), timeout=30)
+    adder = 0 + num
+    dut1.expect(f'/adder visitor count = {visitor}', timeout=30)
+    dut1.expect(f'/adder PUT handler read {num}', timeout=30)
     try:
         # Re allocation shouldn't happen
         dut1.expect('PUT allocating new session', timeout=30)
@@ -89,20 +86,20 @@ def test_examples_protocol_http_server_persistence(env, extra_data):
     # Test POST request and session persistence
     random_nums = [random.randint(0,100) for _ in range(100)]
     for num in random_nums:
-        Utility.console_log('Adding: ' + str(num))
+        Utility.console_log(f'Adding: {str(num)}')
         client.postreq(conn, '/adder', str(num))
         visitor += 1
         adder += num
-        dut1.expect('/adder visitor count = ' + str(visitor), timeout=30)
-        dut1.expect('/adder handler read ' + str(num), timeout=30)
+        dut1.expect(f'/adder visitor count = {visitor}', timeout=30)
+        dut1.expect(f'/adder handler read {str(num)}', timeout=30)
 
     # Test GET request and session persistence
-    Utility.console_log('Matching final sum: ' + str(adder))
+    Utility.console_log(f'Matching final sum: {str(adder)}')
     if client.getreq(conn, '/adder').decode() != str(adder):
         raise RuntimeError
     visitor += 1
-    dut1.expect('/adder visitor count = ' + str(visitor), timeout=30)
-    dut1.expect('/adder GET handler send ' + str(adder), timeout=30)
+    dut1.expect(f'/adder visitor count = {visitor}', timeout=30)
+    dut1.expect(f'/adder GET handler send {str(adder)}', timeout=30)
 
     Utility.console_log('Ending session')
     # Close connection and check for invocation of context "Free" function
@@ -115,8 +112,8 @@ def test_examples_protocol_http_server_persistence(env, extra_data):
     num = random.randint(0,100)
     client.putreq(conn, '/adder', str(num))
     visitor += 1
-    dut1.expect('/adder visitor count = ' + str(visitor), timeout=30)
-    dut1.expect('/adder PUT handler read ' + str(num), timeout=30)
+    dut1.expect(f'/adder visitor count = {visitor}', timeout=30)
+    dut1.expect(f'/adder PUT handler read {num}', timeout=30)
     dut1.expect('PUT allocating new session', timeout=30)
     client.end_session(conn)
     dut1.expect('/adder Free Context function called', timeout=30)

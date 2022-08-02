@@ -31,7 +31,9 @@ def _list(str_or_list):  # type: (Union[str, list]) -> list
     elif isinstance(str_or_list, list):
         return str_or_list
     else:
-        raise ValueError('Wrong type: {}. Only supports str or list.'.format(type(str_or_list)))
+        raise ValueError(
+            f'Wrong type: {type(str_or_list)}. Only supports str or list.'
+        )
 
 
 def _format_nested_dict(_dict, f_tuple):  # type: (dict[str, dict], tuple[str, ...]) -> dict[str, dict]
@@ -101,25 +103,24 @@ class RulesWriter:
 
         self.graph = None
 
-    def expand_matrices(self):  # type: () -> dict
+    def expand_matrices(self):    # type: () -> dict
         """
         Expand the matrix into different rules
         """
         res = {}
         for k, v in self.cfg.items():
-            res.update(self._expand_matrix(k, v))
+            res |= self._expand_matrix(k, v)
 
         for k, v in self.cfg.items():
             if not v:
                 continue
-            deploy = v.get('deploy')
-            if deploy:
+            if deploy := v.get('deploy'):
                 for item in _list(deploy):
-                    res['{}-{}'.format(k, item)] = v
+                    res[f'{k}-{item}'] = v
         return res
 
     @staticmethod
-    def _expand_matrix(name, cfg):  # type: (str, dict) -> dict
+    def _expand_matrix(name, cfg):    # type: (str, dict) -> dict
         """
         Expand matrix into multi keys
         :param cfg: single rule dict
@@ -134,7 +135,7 @@ class RulesWriter:
 
         res = {}
         for comb in product(*_list(matrices)):
-            res.update(_format_nested_dict(default, comb))
+            res |= _format_nested_dict(default, comb)
         return res
 
     def expand_rules(self):  # type: () -> dict[str, dict[str, list]]
@@ -143,10 +144,7 @@ class RulesWriter:
             if not v:
                 continue
             for vk, vv in v.items():
-                if vk in self.KEYWORDS:
-                    res[k][vk] = set(_list(vv))
-                else:
-                    res[k][vk] = vv
+                res[k][vk] = set(_list(vv)) if vk in self.KEYWORDS else vv
             for key in self.KEYWORDS:  # provide empty set for missing field
                 if key not in res[k]:
                     res[k][key] = set()
@@ -161,8 +159,8 @@ class RulesWriter:
                     if 'patterns' in v:
                         for _pat in _list(v['patterns']):
                             # Patterns must be pre-defined
-                            if '.patterns-{}'.format(_pat) not in self.rules_cfg:
-                                print('WARNING: pattern {} not exists'.format(_pat))
+                            if f'.patterns-{_pat}' not in self.rules_cfg:
+                                print(f'WARNING: pattern {_pat} not exists')
                                 continue
                             res[item]['patterns'].add(_pat)
 
@@ -183,9 +181,7 @@ class RulesWriter:
             _labels.update(_list(labels))
         labels = sorted(_labels)
 
-        res = ''
-        res += '\n\n'.join([self._format_label(_label) for _label in labels])
-        return res
+        return '' + '\n\n'.join([self._format_label(_label) for _label in labels])
 
     @classmethod
     def _format_label(cls, label):  # type: (str) -> str
@@ -196,9 +192,11 @@ class RulesWriter:
         return label.upper().replace('-', '_')
 
     def new_rules_str(self):  # type: () -> str
-        res = []
-        for k, v in sorted(self.rules.items()):
-            res.append(self.RULES_TEMPLATE.format(k, self._format_rule(k, v)))
+        res = [
+            self.RULES_TEMPLATE.format(k, self._format_rule(k, v))
+            for k, v in sorted(self.rules.items())
+        ]
+
         return '\n\n'.join(res)
 
     def _format_rule(self, name, cfg):  # type: (str, dict) -> str
@@ -206,33 +204,34 @@ class RulesWriter:
         if name.endswith('-production'):
             _rules.append(self.RULE_PROTECTED_NO_LABEL)
         else:
-            if not (name.endswith('-preview') or name.startswith('labels:')):
+            if not name.endswith('-preview') and not name.startswith('labels:'):
                 _rules.append(self.RULE_PROTECTED)
             # Special case for esp32c3 example_test, for now it only run with label
             if name.startswith('test:') or name == 'labels:example_test-esp32c3':
                 _rules.append(self.RULE_BUILD_ONLY)
-            for label in cfg['labels']:
-                _rules.append(self.RULE_LABEL_TEMPLATE.format(label))
+            _rules.extend(
+                self.RULE_LABEL_TEMPLATE.format(label) for label in cfg['labels']
+            )
+
             for pattern in cfg['patterns']:
-                if '.patterns-{}'.format(pattern) in self.rules_cfg:
+                if f'.patterns-{pattern}' in self.rules_cfg:
                     _rules.append(self.RULE_PATTERN_TEMPLATE.format(pattern))
                 else:
-                    print('WARNING: pattern {} not exists'.format(pattern))
+                    print(f'WARNING: pattern {pattern} not exists')
         return '\n'.join(_rules)
 
     def update_rules_yml(self):  # type: () -> bool
         with open(self.rules_yml) as fr:
             file_str = fr.read()
 
-        auto_generate_str = '\n{}\n\n{}\n'.format(self.new_labels_str(), self.new_rules_str())
+        auto_generate_str = f'\n{self.new_labels_str()}\n\n{self.new_rules_str()}\n'
         rest, marker, old = file_str.partition(self.AUTO_GENERATE_MARKER)
         if old == auto_generate_str:
             return False
-        else:
-            print(self.rules_yml, 'has been modified. Please check')
-            with open(self.rules_yml, 'w') as fw:
-                fw.write(rest + marker + auto_generate_str)
-            return True
+        print(self.rules_yml, 'has been modified. Please check')
+        with open(self.rules_yml, 'w') as fw:
+            fw.write(rest + marker + auto_generate_str)
+        return True
 
 
 LABEL_COLOR = 'green'
@@ -246,22 +245,19 @@ def build_graph(rules_dict):  # type: (dict[str, dict[str, list]]) -> pgv.AGraph
     for k, v in rules_dict.items():
         if not v:
             continue
-        included_in = v.get('included_in')
-        if included_in:
+        if included_in := v.get('included_in'):
             for item in _list(included_in):
                 graph.add_node(k, color=RULE_COLOR)
                 graph.add_node(item, color=RULE_COLOR)
                 graph.add_edge(k, item, color=RULE_COLOR)
-        labels = v.get('labels')
-        if labels:
+        if labels := v.get('labels'):
             for _label in labels:
-                graph.add_node('label:{}'.format(_label), color=LABEL_COLOR)
-                graph.add_edge('label:{}'.format(_label), k, color=LABEL_COLOR)
-        patterns = v.get('patterns')
-        if patterns:
+                graph.add_node(f'label:{_label}', color=LABEL_COLOR)
+                graph.add_edge(f'label:{_label}', k, color=LABEL_COLOR)
+        if patterns := v.get('patterns'):
             for _pat in patterns:
-                graph.add_node('pattern:{}'.format(_pat), color=PATTERN_COLOR)
-                graph.add_edge('pattern:{}'.format(_pat), k, color=PATTERN_COLOR)
+                graph.add_node(f'pattern:{_pat}', color=PATTERN_COLOR)
+                graph.add_edge(f'pattern:{_pat}', k, color=PATTERN_COLOR)
 
     return graph
 

@@ -52,7 +52,7 @@ class IperfTestUtilityEth(IperfUtility.IperfTestUtility):
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_Ethernet')
-def test_ethernet_throughput_basic(env, _):  # type: (Any, Any) -> None
+def test_ethernet_throughput_basic(env, _):    # type: (Any, Any) -> None
     """
     steps: |
       1. test TCP tx rx and UDP tx rx throughput
@@ -83,17 +83,33 @@ def test_ethernet_throughput_basic(env, _):  # type: (Any, Any) -> None
     # 4. log performance and compare with pass standard
     performance_items = []
     for throughput_type in test_result:
-        ttfw_idf.log_performance('{}_throughput'.format(throughput_type),
-                                 '{:.02f} Mbps'.format(test_result[throughput_type].get_best_throughput()))
-        performance_items.append(['{}_throughput'.format(throughput_type),
-                                  '{:.02f} Mbps'.format(test_result[throughput_type].get_best_throughput())])
+        ttfw_idf.log_performance(
+            f'{throughput_type}_throughput',
+            '{:.02f} Mbps'.format(
+                test_result[throughput_type].get_best_throughput()
+            ),
+        )
+
+        performance_items.append(
+            [
+                f'{throughput_type}_throughput',
+                '{:.02f} Mbps'.format(
+                    test_result[throughput_type].get_best_throughput()
+                ),
+            ]
+        )
+
 
     # 5. save to report
     TinyFW.JunitReport.update_performance(performance_items)
     # do check after logging, otherwise test will exit immediately if check fail, some performance can't be logged.
     for throughput_type in test_result:
-        ttfw_idf.check_performance('{}_throughput'.format(throughput_type + '_eth'),
-                                   test_result[throughput_type].get_best_throughput(), dut.TARGET)
+        ttfw_idf.check_performance(
+            f'{throughput_type}_eth_throughput',
+            test_result[throughput_type].get_best_throughput(),
+            dut.TARGET,
+        )
+
 
     env.close_dut('iperf')
 

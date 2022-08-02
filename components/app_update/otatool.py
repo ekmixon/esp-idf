@@ -82,7 +82,7 @@ class OtatoolTarget():
 
     def _get_partition_id_from_ota_id(self, ota_id):
         if isinstance(ota_id, int):
-            return PartitionType('app', 'ota_' + str(ota_id))
+            return PartitionType('app', f'ota_{str(ota_id)}')
         else:
             return PartitionName(ota_id)
 
@@ -98,7 +98,7 @@ class OtatoolTarget():
 
         partition_table = self.target.partition_table
 
-        ota_partitions = list()
+        ota_partitions = []
 
         for i in range(gen.NUM_PARTITION_SUBTYPE_APP_OTA):
             ota_partition = filter(lambda p: p.subtype == (gen.MIN_PARTITION_SUBTYPE_APP_OTA + i), partition_table)
@@ -133,26 +133,18 @@ class OtatoolTarget():
 
         # Both are valid, take the max as computation base
         if is_otadata_info_valid(otadata_info[0]) and is_otadata_info_valid(otadata_info[1]):
-            if otadata_info[0].seq >= otadata_info[1].seq:
-                otadata_compute_base = 0
-            else:
-                otadata_compute_base = 1
-        # Only one copy is valid, use that
+            otadata_compute_base = 0 if otadata_info[0].seq >= otadata_info[1].seq else 1
         elif is_otadata_info_valid(otadata_info[0]):
             otadata_compute_base = 0
         elif is_otadata_info_valid(otadata_info[1]):
             otadata_compute_base = 1
-        # Both are invalid (could be initial state - all 0xFF's)
-        else:
-            pass
-
         ota_seq_next = 0
         ota_partitions_num = len(ota_partitions)
 
         target_seq = (ota_partition_next.subtype & 0x0F) + 1
 
         # Find the next ota sequence number
-        if otadata_compute_base == 0 or otadata_compute_base == 1:
+        if otadata_compute_base in {0, 1}:
             base_seq = otadata_info[otadata_compute_base].seq % (1 << 32)
 
             i = 0
@@ -220,12 +212,12 @@ def _switch_ota_partition(target, ota_id):
 
 def _read_ota_partition(target, ota_id, output):
     target.read_ota_partition(ota_id, output)
-    status('Read ota partition contents to file {}'.format(output))
+    status(f'Read ota partition contents to file {output}')
 
 
 def _write_ota_partition(target, ota_id, input):
     target.write_ota_partition(ota_id, input)
-    status('Written contents of file {} to ota partition'.format(input))
+    status(f'Written contents of file {input} to ota partition')
 
 
 def _erase_ota_partition(target, ota_id):
@@ -331,9 +323,8 @@ def main():
     try:
         if args.name is not None:
             ota_id = ['name']
-        else:
-            if args.slot is not None:
-                ota_id = ['slot']
+        elif args.slot is not None:
+            ota_id = ['slot']
     except AttributeError:
         pass
 
@@ -349,7 +340,7 @@ def main():
     (op, op_args) = otatool_ops[args.operation]
 
     for op_arg in op_args:
-        common_args.update({op_arg:vars(args)[op_arg]})
+        common_args[op_arg] = vars(args)[op_arg]
 
     try:
         common_args['ota_id'] = common_args.pop('name')

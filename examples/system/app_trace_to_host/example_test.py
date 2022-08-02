@@ -30,12 +30,12 @@ def test_examples_app_trace_to_host(env, extra_data):
 
     with open(oocd_log_path) as oocd_log:
         cores = 1 if dut.app.get_sdkconfig().get('CONFIG_FREERTOS_UNICORE', '').replace('"','') == 'y' else 2
-        params_str = 'App trace params: from {} cores'.format(cores)
+        params_str = f'App trace params: from {cores} cores'
         for line in oocd_log:
             if params_str in line:
                 break
         else:
-            raise RuntimeError('"{}" could not be found in {}'.format(params_str, oocd_log_path))
+            raise RuntimeError(f'"{params_str}" could not be found in {oocd_log_path}')
 
     with ttfw_idf.CustomProcess(' '.join([os.path.join(idf_path, 'tools/esp_app_trace/logtrace_proc.py'),
                                           'adc.log',

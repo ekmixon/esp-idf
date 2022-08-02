@@ -77,16 +77,16 @@ class ParttoolTarget():
         gen.offset_part_table = partition_table_offset
 
         def parse_esptool_args(esptool_args):
-            results = list()
+            results = []
             for arg in esptool_args:
                 pattern = re.compile(r'(.+)=(.+)')
                 result = pattern.match(arg)
                 try:
-                    key = result.group(1)
-                    value = result.group(2)
-                    results.extend(['--' + key, value])
+                    key = result[1]
+                    value = result[2]
+                    results.extend([f'--{key}', value])
                 except AttributeError:
-                    results.extend(['--' + arg])
+                    results.extend([f'--{arg}'])
             return results
 
         self.esptool_args = parse_esptool_args(esptool_args)
@@ -133,11 +133,11 @@ class ParttoolTarget():
 
         esptool_args += args
 
-        print('Running %s...' % (' '.join(esptool_args)))
+        print(f"Running {' '.join(esptool_args)}...")
         try:
             subprocess.check_call(esptool_args, stdout=out, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
-            print('An exception: **', str(e), '** occurred in _call_esptool.', file=out)
+            print('An exception: **', e, '** occurred in _call_esptool.', file=out)
             raise e
 
     def get_partition_info(self, partition_id):
@@ -150,7 +150,7 @@ class ParttoolTarget():
             if not partition_id.part_list:
                 partition = partition[0]
         else:  # default boot partition
-            search = ['factory'] + ['ota_{}'.format(d) for d in range(16)]
+            search = ['factory'] + [f'ota_{d}' for d in range(16)]
             for subtype in search:
                 partition = next(self.partition_table.find_by_type('app', subtype), None)
                 if partition:
@@ -215,17 +215,18 @@ def _get_partition_info(target, partition_id, info):
     try:
         for p in partitions:
             info_dict = {
-                'name': '{}'.format(p.name),
-                'type': '{}'.format(p.type),
-                'subtype': '{}'.format(p.subtype),
+                'name': f'{p.name}',
+                'type': f'{p.type}',
+                'subtype': f'{p.subtype}',
                 'offset': '0x{:x}'.format(p.offset),
                 'size': '0x{:x}'.format(p.size),
-                'encrypted': '{}'.format(p.encrypted)
+                'encrypted': f'{p.encrypted}',
             }
+
             for i in info:
                 infos += [info_dict[i]]
     except KeyError:
-        raise RuntimeError('Request for unknown partition info {}'.format(i))
+        raise RuntimeError(f'Request for unknown partition info {i}')
 
     print(' '.join(infos))
 
@@ -345,7 +346,7 @@ def main():
     (op, op_args) = parttool_ops[args.operation]
 
     for op_arg in op_args:
-        common_args.update({op_arg:vars(args)[op_arg]})
+        common_args[op_arg] = vars(args)[op_arg]
 
     if quiet:
         # If exceptions occur, suppress and exit quietly

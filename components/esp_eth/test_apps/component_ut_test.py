@@ -12,19 +12,19 @@ except ImportError:
     pass
 
 
-def configure_eth_if(func):         # type: (typing.Any) -> typing.Any
+def configure_eth_if(func):     # type: (typing.Any) -> typing.Any
     def inner(*args, **kwargs):     # type: (typing.Any, typing.Any) -> typing.Any
         # try to determine which interface to use
         netifs = os.listdir('/sys/class/net/')
         target_if = ''
-        print('detected interfaces: ' + str(netifs))
+        print(f'detected interfaces: {str(netifs)}')
         for netif in netifs:
             if netif.find('eth') == 0 or netif.find('enp') == 0 or netif.find('eno') == 0:
                 target_if = netif
                 break
         if target_if == '':
             raise Exception('no network interface found')
-        print('Use ' + target_if + ' for testing')
+        print(f'Use {target_if} for testing')
         so = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, 0x2222)
         so.bind((target_if, 0))
 

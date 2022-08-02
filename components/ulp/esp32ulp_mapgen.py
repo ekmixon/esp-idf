@@ -65,11 +65,11 @@ def main():
         return 1
 
     if options.riscv:
-        with open(options.outputfile + '.h', 'w') as f_h, open(options.outputfile + '.ld', 'w') as f_ld, open(options.symfile) as f_sym:
+        with open(f'{options.outputfile}.h', 'w') as f_h, open(f'{options.outputfile}.ld', 'w') as f_ld, open(options.symfile) as f_sym:
             gen_ld_h_from_sym_riscv(f_sym, f_ld, f_h)
         return 0
 
-    with open(options.outputfile + '.h', 'w') as f_h, open(options.outputfile + '.ld', 'w') as f_ld, open(options.symfile) as f_sym:
+    with open(f'{options.outputfile}.h', 'w') as f_h, open(f'{options.outputfile}.ld', 'w') as f_ld, open(options.symfile) as f_sym:
         gen_ld_h_from_sym(f_sym, f_ld, f_h)
     return 0
 

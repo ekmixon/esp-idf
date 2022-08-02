@@ -14,10 +14,13 @@ def test_examples_himem(env, extra_data):
     mem = dut.expect(re.compile(r'esp_himem: Initialized. Using last \d+ 32KB address blocks for bank '
                                 r'switching on (\d+) KB of physical memory.'), timeout=30)[0]
 
-    dut.expect_all(re.compile(r'Himem has {}KiB of memory, \d+KiB of which is free. '
-                              r'Testing the free memory...'.format(mem)),
-                   'Done!',
-                   timeout=10)
+    dut.expect_all(
+        re.compile(
+            f'Himem has {mem}KiB of memory, \d+KiB of which is free. Testing the free memory...'
+        ),
+        'Done!',
+        timeout=10,
+    )
 
 
 if __name__ == '__main__':

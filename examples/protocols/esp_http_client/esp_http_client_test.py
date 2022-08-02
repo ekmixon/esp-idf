@@ -15,7 +15,7 @@ def test_examples_protocol_esp_http_client(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'esp_http_client_example.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('esp_http_client_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('esp_http_client_bin_size', f'{bin_size // 1024}KB')
     # start test
     dut1.start_app()
     dut1.expect('Connected to AP, begin http example', timeout=30)
@@ -41,7 +41,7 @@ def test_examples_protocol_esp_http_client(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'esp_http_client_example.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('esp_http_client_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('esp_http_client_bin_size', f'{bin_size // 1024}KB')
     # start test
     dut1.start_app()
     dut1.expect('Connected to AP, begin http example', timeout=30)

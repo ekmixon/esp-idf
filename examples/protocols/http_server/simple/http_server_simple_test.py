@@ -70,7 +70,7 @@ def test_examples_protocol_http_server_simple(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'simple.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('http_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting http_server simple test app')
@@ -81,8 +81,8 @@ def test_examples_protocol_http_server_simple(env, extra_data):
     got_ip = dut1.expect(re.compile(r'(?:[\s\S]*)IPv4 address: (\d+.\d+.\d+.\d+)'), timeout=30)[0]
     got_port = dut1.expect(re.compile(r"(?:[\s\S]*)Starting server on port: '(\d+)'"), timeout=30)[0]
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Expected Logs
     dut1.expect('Registering URI handlers', timeout=30)
@@ -117,16 +117,16 @@ def test_examples_protocol_http_server_simple(env, extra_data):
         raise RuntimeError
 
     query = 'http://foobar'
-    Utility.console_log('Test /hello with custom query : ' + query)
+    Utility.console_log(f'Test /hello with custom query : {query}')
     if not client.test_custom_uri_query(got_ip, got_port, query):
         raise RuntimeError
-    dut1.expect('Found URL query => ' + query, timeout=30)
+    dut1.expect(f'Found URL query => {query}', timeout=30)
 
     query = 'abcd+1234%20xyz'
-    Utility.console_log('Test /hello with custom query : ' + query)
+    Utility.console_log(f'Test /hello with custom query : {query}')
     if not client.test_custom_uri_query(got_ip, got_port, query):
         raise RuntimeError
-    dut1.expect('Found URL query => ' + query, timeout=30)
+    dut1.expect(f'Found URL query => {query}', timeout=30)
 
 
 @ttfw_idf.idf_example_test(env_tag='Example_WIFI_Protocols')
@@ -137,7 +137,7 @@ def test_examples_protocol_http_server_lru_purge_enable(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'simple.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('http_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('http_server_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     Utility.console_log('Starting http_server simple test app')
@@ -148,8 +148,8 @@ def test_examples_protocol_http_server_lru_purge_enable(env, extra_data):
     got_ip = dut1.expect(re.compile(r'(?:[\s\S]*)IPv4 address: (\d+.\d+.\d+.\d+)'), timeout=30)[0]
     got_port = dut1.expect(re.compile(r"(?:[\s\S]*)Starting server on port: '(\d+)'"), timeout=30)[0]
 
-    Utility.console_log('Got IP   : ' + got_ip)
-    Utility.console_log('Got Port : ' + got_port)
+    Utility.console_log(f'Got IP   : {got_ip}')
+    Utility.console_log(f'Got Port : {got_port}')
 
     # Expected Logs
     dut1.expect('Registering URI handlers', timeout=30)
@@ -161,7 +161,7 @@ def test_examples_protocol_http_server_lru_purge_enable(env, extra_data):
             thread.start()
             threads.append(thread)
         except OSError as err:
-            Utility.console_log('Error: unable to start thread, ' + err)
+            Utility.console_log(f'Error: unable to start thread, {err}')
 
     for t in threads:
         t.join()

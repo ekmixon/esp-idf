@@ -37,7 +37,7 @@ def udp_client(address, payload):
         reply, addr = sock.recvfrom(128)
         if not reply:
             return
-        print('Reply[' + addr[0] + ':' + str(addr[1]) + '] - ' + str(reply))
+        print(f'Reply[{addr[0]}:{str(addr[1])}] - {str(reply)}')
     except socket.timeout:
         print('Socket operation timeout')
         return str(None)
@@ -63,15 +63,15 @@ def test_examples_protocol_socket_udpserver(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'udp_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('udp_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('udp_server_bin_size', f'{bin_size // 1024}KB')
 
     # start test
     dut1.start_app()
 
     ipv4 = dut1.expect(re.compile(r' IPv4 address: ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)'), timeout=30)[0]
     ipv6_r = r':'.join((r'[0-9a-fA-F]{4}',) * 8)    # expect all 8 octets from IPv6 (assumes it's printed in the long form)
-    ipv6 = dut1.expect(re.compile(r' IPv6 address: ({})'.format(ipv6_r)), timeout=30)[0]
-    print('Connected with IPv4={} and IPv6={}'.format(ipv4, ipv6))
+    ipv6 = dut1.expect(re.compile(f' IPv6 address: ({ipv6_r})'), timeout=30)[0]
+    print(f'Connected with IPv4={ipv4} and IPv6={ipv6}')
     dut1.expect(re.compile(r'Waiting for data'), timeout=10)
 
     # test IPv4
@@ -82,18 +82,24 @@ def test_examples_protocol_socket_udpserver(env, extra_data):
             print('OK')
             break
     else:
-        raise ValueError('IPv4: Did not receive UDP message after {} retries'.format(MAX_RETRIES))
+        raise ValueError(
+            f'IPv4: Did not receive UDP message after {MAX_RETRIES} retries'
+        )
+
     dut1.expect(MESSAGE)
 
     # test IPv6
     for _ in range(MAX_RETRIES):
         print('Testing UDP on IPv6...')
-        received = udp_client('{}%{}'.format(ipv6, INTERFACE), MESSAGE)
+        received = udp_client(f'{ipv6}%{INTERFACE}', MESSAGE)
         if received == MESSAGE:
             print('OK')
             break
     else:
-        raise ValueError('IPv6: Did not receive UDP message after {} retries'.format(MAX_RETRIES))
+        raise ValueError(
+            f'IPv6: Did not receive UDP message after {MAX_RETRIES} retries'
+        )
+
     dut1.expect(MESSAGE)
 
 

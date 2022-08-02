@@ -72,7 +72,7 @@ class DutTestThread(Thread):
         super(DutTestThread, self).__init__()
 
     def __enter__(self):
-        logger.debug('Restart %s.' % self.tname)
+        logger.debug(f'Restart {self.tname}.')
         # Reset DUT first
         self.dut.reset()
         # Capture output from the DUT
@@ -83,7 +83,9 @@ class DutTestThread(Thread):
         """ The exit method of context manager
         """
         if exc_type is not None or exc_value is not None:
-            logger.info('Thread %s rised an exception type: %s, value: %s' % (self.tname, str(exc_type), str(exc_value)))
+            logger.info(
+                f'Thread {self.tname} rised an exception type: {str(exc_type)}, value: {str(exc_value)}'
+            )
 
     def run(self):
         """ The function implements thread functionality
@@ -112,12 +114,12 @@ class DutTestThread(Thread):
         result = self.dut.expect(re.compile(message), TEST_EXPECT_STR_TIMEOUT)
         if int(result[0]) != index:
             raise Exception('Incorrect index of IP=%d for %s\n' % (int(result[0]), str(self.dut)))
-        message = 'IP%s=%s' % (result[0], self.ip_addr)
+        message = f'IP{result[0]}={self.ip_addr}'
         self.dut.write(message, '\r\n', False)
-        logger.debug('Sent message for %s: %s' % (self.tname, message))
+        logger.debug(f'Sent message for {self.tname}: {message}')
         message = r'.*IP\([0-9]+\) = \[([0-9a-zA-Z\.\:]+)\] set from stdin.*'
         result = self.dut.expect(re.compile(message), TEST_EXPECT_STR_TIMEOUT)
-        logger.debug('Thread %s initialized with slave IP (%s).' % (self.tname, result[0]))
+        logger.debug(f'Thread {self.tname} initialized with slave IP ({result[0]}).')
 
     def test_start(self, timeout_value):
         """ The method to initialize and handle test stages
@@ -125,37 +127,37 @@ class DutTestThread(Thread):
         def handle_get_ip4(data):
             """ Handle get_ip v4
             """
-            logger.debug('%s[STACK_IPV4]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[STACK_IPV4]: {str(data)}')
             self.test_stage = STACK_IPV4
 
         def handle_get_ip6(data):
             """ Handle get_ip v6
             """
-            logger.debug('%s[STACK_IPV6]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[STACK_IPV6]: {str(data)}')
             self.test_stage = STACK_IPV6
 
         def handle_init(data):
             """ Handle init
             """
-            logger.debug('%s[STACK_INIT]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[STACK_INIT]: {str(data)}')
             self.test_stage = STACK_INIT
 
         def handle_connect(data):
             """ Handle connect
             """
-            logger.debug('%s[STACK_CONNECT]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[STACK_CONNECT]: {str(data)}')
             self.test_stage = STACK_CONNECT
 
         def handle_test_start(data):
             """ Handle connect
             """
-            logger.debug('%s[STACK_START]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[STACK_START]: {str(data)}')
             self.test_stage = STACK_START
 
         def handle_par_ok(data):
             """ Handle parameter ok
             """
-            logger.debug('%s[READ_PAR_OK]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[READ_PAR_OK]: {str(data)}')
             if self.test_stage >= STACK_START:
                 self.param_ok_count += 1
             self.test_stage = STACK_PAR_OK
@@ -163,14 +165,14 @@ class DutTestThread(Thread):
         def handle_par_fail(data):
             """ Handle parameter fail
             """
-            logger.debug('%s[READ_PAR_FAIL]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[READ_PAR_FAIL]: {str(data)}')
             self.param_fail_count += 1
             self.test_stage = STACK_PAR_FAIL
 
         def handle_destroy(data):
             """ Handle destroy
             """
-            logger.debug('%s[DESTROY]: %s' % (self.tname, str(data)))
+            logger.debug(f'{self.tname}[DESTROY]: {str(data)}')
             self.test_stage = STACK_DESTROY
             self.test_finish = True
 
@@ -199,7 +201,10 @@ def test_check_mode(dut=None, mode_str=None, value=None):
         logger.debug('%s {%s} = %s.\n' % (str(dut), mode_str, opt))
         return value == opt
     except Exception:
-        logger.error('ENV_TEST_FAILURE: %s: Cannot find option %s in sdkconfig.' % (str(dut), mode_str))
+        logger.error(
+            f'ENV_TEST_FAILURE: {str(dut)}: Cannot find option {mode_str} in sdkconfig.'
+        )
+
     return False
 
 
@@ -212,7 +217,7 @@ def test_modbus_communication(env, comm_mode):
     dut_master = env.get_dut('modbus_tcp_master', os.path.join(rel_project_path, TEST_MASTER_TCP))
     dut_slave = env.get_dut('modbus_tcp_slave', os.path.join(rel_project_path, TEST_SLAVE_TCP))
     log_file = os.path.join(env.log_path, 'modbus_tcp_test.log')
-    print('Logging file name: %s' % log_file)
+    print(f'Logging file name: {log_file}')
 
     try:
         # create file handler which logs even debug messages
@@ -240,22 +245,31 @@ def test_modbus_communication(env, comm_mode):
             logger.error('ENV_TEST_FAILURE: IP resolver mode do not match in the master and slave implementation.\n')
             raise Exception('ENV_TEST_FAILURE: IP resolver mode do not match in the master and slave implementation.\n')
         address = None
-        if test_check_mode(dut_master, 'CONFIG_MB_SLAVE_IP_FROM_STDIN', 'y'):
-            logger.info('ENV_TEST_INFO: Set slave IP address through STDIN.\n')
-            # Flash app onto DUT (Todo: Debug case when the slave flashed before master then expect does not work correctly for no reason
-            dut_slave.start_app()
-            dut_master.start_app()
-            if test_check_mode(dut_master, 'CONFIG_EXAMPLE_CONNECT_IPV6', 'y'):
-                address = dut_slave.expect(re.compile(pattern_dict_slave[STACK_IPV6]), TEST_EXPECT_STR_TIMEOUT)
-            else:
-                address = dut_slave.expect(re.compile(pattern_dict_slave[STACK_IPV4]), TEST_EXPECT_STR_TIMEOUT)
-            if address is not None:
-                    print('Found IP slave address: %s' % address[0])
-            else:
-                raise Exception('ENV_TEST_FAILURE: Slave IP address is not found in the output. Check network settings.\n')
-        else:
+        if not test_check_mode(
+            dut_master, 'CONFIG_MB_SLAVE_IP_FROM_STDIN', 'y'
+        ):
             raise Exception('ENV_TEST_FAILURE: Slave IP resolver is not configured correctly.\n')
 
+        logger.info('ENV_TEST_INFO: Set slave IP address through STDIN.\n')
+        # Flash app onto DUT (Todo: Debug case when the slave flashed before master then expect does not work correctly for no reason
+        dut_slave.start_app()
+        dut_master.start_app()
+        address = (
+            dut_slave.expect(
+                re.compile(pattern_dict_slave[STACK_IPV6]),
+                TEST_EXPECT_STR_TIMEOUT,
+            )
+            if test_check_mode(dut_master, 'CONFIG_EXAMPLE_CONNECT_IPV6', 'y')
+            else dut_slave.expect(
+                re.compile(pattern_dict_slave[STACK_IPV4]),
+                TEST_EXPECT_STR_TIMEOUT,
+            )
+        )
+
+        if address is not None:
+            print(f'Found IP slave address: {address[0]}')
+        else:
+            raise Exception('ENV_TEST_FAILURE: Slave IP address is not found in the output. Check network settings.\n')
         # Create thread for each dut
         with DutTestThread(dut=dut_master, name=master_name, ip_addr=address[0], expect=pattern_dict_master) as dut_master_thread:
             with DutTestThread(dut=dut_slave, name=slave_name, ip_addr=None, expect=pattern_dict_slave) as dut_slave_thread:

@@ -11,7 +11,7 @@ def test_real_time_stats_example(env, extra_data):
     dut = env.get_dut('real_time_stats', 'examples/system/freertos/real_time_stats')
     dut.start_app()
 
-    for iteration in range(0, STATS_TASK_ITERS):
+    for _ in range(STATS_TASK_ITERS):
         dut.expect(STATS_TASK_EXPECT)
 
 

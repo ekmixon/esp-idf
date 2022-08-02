@@ -16,13 +16,16 @@ def test_examples_icmp_echo(env, extra_data):
     dut.expect('esp>')
 
     ping_dest = os.getenv('EXAMPLE_ICMP_SERVER', 'www.espressif.com')
-    dut.write('ping {}'.format(ping_dest))
+    dut.write(f'ping {ping_dest}')
 
     ip_re = r'\.'.join((r'\d{1,3}',) * 4)
-    ip = dut.expect(re.compile(r'64 bytes from ({}) icmp_seq=1 ttl=\d+ time=\d+ ms'.format(ip_re)))[0]
+    ip = dut.expect(
+        re.compile(f'64 bytes from ({ip_re}) icmp_seq=1 ttl=\d+ time=\d+ ms')
+    )[0]
+
 
     # expect at least one more (there could be lost packets)
-    dut.expect(re.compile(r'64 bytes from {} icmp_seq=[2-5] ttl=\d+ time='.format(ip)))
+    dut.expect(re.compile(f'64 bytes from {ip} icmp_seq=[2-5] ttl=\d+ time='))
 
     dut.expect(re.compile(r'5 packets transmitted, [2-5] received, \d{1,3}% packet loss'))
     dut.write('')

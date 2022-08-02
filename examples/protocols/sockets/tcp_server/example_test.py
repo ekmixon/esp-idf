@@ -29,7 +29,7 @@ def tcp_client(address, payload):
         sock = socket.socket(family_addr, socket.SOCK_STREAM)
         sock.settimeout(60.0)
     except socket.error as msg:
-        print('Could not create socket: ' + str(msg[0]) + ': ' + msg[1])
+        print(f'Could not create socket: {str(msg[0])}: {msg[1]}')
         raise
     try:
         sock.connect(addr)
@@ -41,7 +41,7 @@ def tcp_client(address, payload):
     data = sock.recv(1024)
     if not data:
         return
-    print('Reply : ' + data.decode())
+    print(f'Reply : {data.decode()}')
     sock.close()
     return data.decode()
 
@@ -59,24 +59,24 @@ def test_examples_protocol_socket_tcpserver(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'tcp_server.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('tcp_server_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('tcp_server_bin_size', f'{bin_size // 1024}KB')
 
     # start test
     dut1.start_app()
 
     ipv4 = dut1.expect(re.compile(r' IPv4 address: ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)'), timeout=30)[0]
     ipv6_r = r':'.join((r'[0-9a-fA-F]{4}',) * 8)    # expect all 8 octets from IPv6 (assumes it's printed in the long form)
-    ipv6 = dut1.expect(re.compile(r' IPv6 address: ({})'.format(ipv6_r)), timeout=30)[0]
-    print('Connected with IPv4={} and IPv6={}'.format(ipv4, ipv6))
+    ipv6 = dut1.expect(re.compile(f' IPv6 address: ({ipv6_r})'), timeout=30)[0]
+    print(f'Connected with IPv4={ipv4} and IPv6={ipv6}')
 
     # test IPv4
     received = tcp_client(ipv4, MESSAGE)
-    if not received == MESSAGE:
+    if received != MESSAGE:
         raise
     dut1.expect(MESSAGE)
     # test IPv6
-    received = tcp_client('{}%{}'.format(ipv6, INTERFACE), MESSAGE)
-    if not received == MESSAGE:
+    received = tcp_client(f'{ipv6}%{INTERFACE}', MESSAGE)
+    if received != MESSAGE:
         raise
     dut1.expect(MESSAGE)
 

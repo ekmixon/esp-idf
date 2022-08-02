@@ -22,8 +22,7 @@ try:
     from corefile.elf import ESPCoreDumpElfFile
     from corefile.loader import ESPCoreDumpFileLoader, ESPCoreDumpLoaderError
 except ImportError:
-    idf_path = os.getenv('IDF_PATH')
-    if idf_path:
+    if idf_path := os.getenv('IDF_PATH'):
         sys.path.insert(0, os.path.join(idf_path, 'components', 'espcoredump'))
     else:
         sys.path.insert(0, '..')

@@ -56,7 +56,11 @@ def test_examples_efuse_with_virt_flash_enc(env, _):  # type: (ttfw_idf.TinyFW.E
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -103,7 +107,11 @@ def test_examples_efuse_with_virt_flash_enc_aes_256(env, _):  # type: (ttfw_idf.
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -197,7 +205,11 @@ def test_examples_efuse_with_virt_flash_enc_release(env, _):  # type: (ttfw_idf.
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -242,7 +254,11 @@ def test_examples_efuse_with_virt_secure_boot_v1(env, _):  # type: (ttfw_idf.Tin
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -338,7 +354,11 @@ def test_examples_efuse_with_virt_secure_boot_v2(env, _):  # type: (ttfw_idf.Tin
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -459,7 +479,11 @@ def test_examples_efuse_with_virt_secure_boot_v2_esp32xx(env, _):  # type: (ttfw
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -573,7 +597,11 @@ def test_examples_efuse_with_virt_sb_v1_and_fe(env, _):  # type: (ttfw_idf.TinyF
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -635,7 +663,11 @@ def test_examples_efuse_with_virt_sb_v2_and_fe(env, _):  # type: (ttfw_idf.TinyF
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()
@@ -713,7 +745,11 @@ def test_examples_efuse_with_virt_sb_v2_and_fe_esp32xx(env, _):  # type: (ttfw_i
     # check and log bin size
     binary_file = os.path.join(dut.app.binary_path, 'bootloader', 'bootloader.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('{}_bootloader_{}_bin_size'.format(dut.app.target, dut.app.config_name), '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance(
+        f'{dut.app.target}_bootloader_{dut.app.config_name}_bin_size',
+        f'{bin_size // 1024}KB',
+    )
+
 
     print(' - Erase flash')
     dut.erase_flash()

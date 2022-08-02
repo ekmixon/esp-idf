@@ -390,7 +390,7 @@ name1.D1.D2.D3.D4,       EFUSE_BLK3,                     0,                     
         t = efuse_table_gen.FuseTable.from_csv(csv)
         t.verify()
 
-        for i in range(0, 5):
+        for i in range(5):
             self.assertEqual(t[i].bit_start, 0)
             self.assertEqual(t[i].bit_count, 5 - i)
 
@@ -406,7 +406,7 @@ name1.D1.D2.D3.D4,       EFUSE_BLK3,                     4,                     
         t = efuse_table_gen.FuseTable.from_csv(csv)
         t.verify()
 
-        for i in range(0, 5):
+        for i in range(5):
             self.assertEqual(t[i].bit_start, i)
             self.assertEqual(t[i].bit_count, 5 - i)
 

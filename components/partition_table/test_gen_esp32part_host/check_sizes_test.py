@@ -35,15 +35,15 @@ phy_init, data, phy,     ,        0x1000,
 """
 
 
-def gen_table(factory_appsize=None, ota0_appsize=None, ota1_appsize=None):  # type: (str, str, str) -> io.BytesIO
+def gen_table(factory_appsize=None, ota0_appsize=None, ota1_appsize=None):    # type: (str, str, str) -> io.BytesIO
     """ generate a partition table binary with up to 3 app partitions with the specified sizes. """
     csv = BASE_CSV
     if factory_appsize:
-        csv += 'factory, app, factory, , {}\n'.format(factory_appsize)
+        csv += f'factory, app, factory, , {factory_appsize}\n'
     if ota0_appsize:
-        csv += 'ota0, app, ota_0, , {}\n'.format(ota0_appsize)
+        csv += f'ota0, app, ota_0, , {ota0_appsize}\n'
     if ota1_appsize:
-        csv += 'ota1, app, ota_1, , {}\n'.format(ota1_appsize)
+        csv += f'ota1, app, ota_1, , {ota1_appsize}\n'
 
     table = gen_esp32part.PartitionTable.from_csv(csv)
     return io.BytesIO(table.to_binary())

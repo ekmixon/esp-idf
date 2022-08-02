@@ -94,12 +94,7 @@ class TraxPacket(object):
         shift = 0
         for i, b in enumerate(self.data[start_byte:]):
             # which bit in the byte is the starting bit
-            if i == 0:
-                # at start_byte: take the offset into account
-                start_bit = 2 + (start % 6)
-            else:
-                # every other byte: start after MSEO bits
-                start_bit = 2
+            start_bit = 2 + (start % 6) if i == 0 else 2
             # how many bits do we need to copy from this byte
             cnt_bits = min(bits_remaining, 8 - start_bit)
             mask = (2 ** cnt_bits) - 1
@@ -128,11 +123,7 @@ class TraxMessage(object):
         assert len(packets) > 0
         self.packets = packets
         self.truncated = truncated
-        if truncated:
-            self.msg_type = None
-        else:
-            self.msg_type = self._get_type()
-
+        self.msg_type = None if truncated else self._get_type()
         # Start and end of the instruction range corresponding to this message
         self.pc_start = 0   # inclusive
         self.pc_end = 0     # not inclusive
@@ -201,8 +192,6 @@ class TraxMessage(object):
             next_pc = self.pc_target
             self.pc_start = next_pc - self.icnt
             self.pc_end = next_pc + 1
-        if self.msg_type == TVAL_CORR:
-            pass
         return next_pc
 
     def process_backward(self, cur_pc):
@@ -225,8 +214,6 @@ class TraxMessage(object):
             prev_pc ^= self.uaddr
             self.pc_start = prev_pc
             self.pc_end = prev_pc + self.icnt + 1
-        if self.msg_type == TVAL_CORR:
-            pass
         return prev_pc
 
     def __str__(self):
@@ -275,7 +262,7 @@ def load_messages(data):
         if b & MSEO_MSGEND:
             msg_cnt += 1
             try:
-                messages.append(TraxMessage(packets, len(messages) == 0))
+                messages.append(TraxMessage(packets, not messages))
             except NotImplementedError as e:
                 sys.stderr.write('Failed to parse message #%03d (at %d bytes): %s\n' % (msg_cnt, i, str(e)))
             packets = []
@@ -295,7 +282,7 @@ def load_messages(data):
     # Now process the skipped messages in the reverse direction,
     # starting from the first message with known PC.
     pc = messages[first_sync_index].pc_start
-    for m in reversed(messages[0:first_sync_index]):
+    for m in reversed(messages[:first_sync_index]):
         if m.truncated:
             break
         pc = m.process_backward(pc)

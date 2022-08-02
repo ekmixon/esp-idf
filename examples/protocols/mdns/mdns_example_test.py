@@ -20,8 +20,8 @@ esp_delegated_answered = Event()
 
 def get_dns_query_for_esp(esp_host):
     dns = dpkt.dns.DNS(b'\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x01')
-    dns.qd[0].name = esp_host + u'.local'
-    console_log('Created query for esp host: {} '.format(dns.__repr__()))
+    dns.qd[0].name = f'{esp_host}.local'
+    console_log(f'Created query for esp host: {dns.__repr__()} ')
     return dns.pack()
 
 
@@ -35,7 +35,7 @@ def get_dns_answer_to_mdns(tester_host):
     arr.name = tester_host
     arr.ip = socket.inet_aton('127.0.0.1')
     dns. an.append(arr)
-    console_log('Created answer to mdns query: {} '.format(dns.__repr__()))
+    console_log(f'Created answer to mdns query: {dns.__repr__()} ')
     return dns.pack()
 
 
@@ -48,7 +48,7 @@ def get_dns_answer_to_mdns_lwip(tester_host, id):
     dns.an[0].ip = socket.inet_aton('127.0.0.1')
     dns.an[0].rdata = socket.inet_aton('127.0.0.1')
     dns.id = id
-    print('Created answer to mdns (lwip) query: {} '.format(dns.__repr__()))
+    print(f'Created answer to mdns (lwip) query: {dns.__repr__()} ')
     return dns.pack()
 
 
@@ -76,7 +76,11 @@ def mdns_server(esp_host):
                 if not esp_answered.is_set():
                     sock.sendto(get_dns_query_for_esp(esp_host), (MCAST_GRP,UDP_PORT))
                 if not esp_delegated_answered.is_set():
-                    sock.sendto(get_dns_query_for_esp(esp_host + '-delegated'), (MCAST_GRP,UDP_PORT))
+                    sock.sendto(
+                        get_dns_query_for_esp(f'{esp_host}-delegated'),
+                        (MCAST_GRP, UDP_PORT),
+                    )
+
             timeout = max(0, QUERY_TIMEOUT - (current_time - last_query_timepoint))
             read_socks, _, _ = select.select([sock], [], [], timeout)
             if not read_socks:
@@ -85,17 +89,17 @@ def mdns_server(esp_host):
             dns = dpkt.dns.DNS(data)
             if len(dns.qd) > 0 and dns.qd[0].type == dpkt.dns.DNS_A:
                 if dns.qd[0].name == TESTER_NAME:
-                    console_log('Received query: {} '.format(dns.__repr__()))
+                    console_log(f'Received query: {dns.__repr__()} ')
                     sock.sendto(get_dns_answer_to_mdns(TESTER_NAME), (MCAST_GRP,UDP_PORT))
                 elif dns.qd[0].name == TESTER_NAME_LWIP:
-                    console_log('Received query: {} '.format(dns.__repr__()))
+                    console_log(f'Received query: {dns.__repr__()} ')
                     sock.sendto(get_dns_answer_to_mdns_lwip(TESTER_NAME_LWIP, dns.id), addr)
             if len(dns.an) > 0 and dns.an[0].type == dpkt.dns.DNS_A:
-                if dns.an[0].name == esp_host + u'.local':
-                    console_log('Received answer to esp32-mdns query: {}'.format(dns.__repr__()))
+                if dns.an[0].name == f'{esp_host}.local':
+                    console_log(f'Received answer to esp32-mdns query: {dns.__repr__()}')
                     esp_answered.set()
-                if dns.an[0].name == esp_host + u'-delegated.local':
-                    console_log('Received answer to esp32-mdns-delegate query: {}'.format(dns.__repr__()))
+                if dns.an[0].name == f'{esp_host}-delegated.local':
+                    console_log(f'Received answer to esp32-mdns-delegate query: {dns.__repr__()}')
                     esp_delegated_answered.set()
         except socket.timeout:
             break
@@ -117,7 +121,7 @@ def test_examples_protocol_mdns(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'mdns_test.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('mdns-test_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('mdns-test_bin_size', f'{bin_size // 1024}KB')
     # 1. start mdns application
     dut1.start_app()
     # 2. get the dut host name (and IP address)
@@ -125,7 +129,7 @@ def test_examples_protocol_mdns(env, extra_data):
     mdns_responder = Thread(target=mdns_server, args=(str(specific_host),))
     try:
         ip_address = dut1.expect(re.compile(r' sta ip: ([^,]+),'), timeout=30)[0]
-        console_log('Connected to AP with IP: {}'.format(ip_address))
+        console_log(f'Connected to AP with IP: {ip_address}')
     except DUT.ExpectTimeout:
         raise ValueError('ENV_TEST_FAILURE: Cannot connect to AP')
     try:
@@ -140,12 +144,26 @@ def test_examples_protocol_mdns(env, extra_data):
         dut1.expect(re.compile(r'mdns-test: gethostbyname: tinytester-lwip.local resolved to: 127.0.0.1'), timeout=30)
         dut1.expect(re.compile(r'mdns-test: getaddrinfo: tinytester-lwip.local resolved to: 127.0.0.1'), timeout=30)
         # 5. check the DUT answers to `dig` command
-        dig_output = subprocess.check_output(['dig', '+short', '-p', '5353', '@224.0.0.251',
-                                              '{}.local'.format(specific_host)])
-        console_log('Resolving {} using "dig" succeeded with:\n{}'.format(specific_host, dig_output))
-        if not ip_address.encode('utf-8') in dig_output:
-            raise ValueError('Test has failed: Incorrectly resolved DUT hostname using dig'
-                             "Output should've contained DUT's IP address:{}".format(ip_address))
+        dig_output = subprocess.check_output(
+            [
+                'dig',
+                '+short',
+                '-p',
+                '5353',
+                '@224.0.0.251',
+                f'{specific_host}.local',
+            ]
+        )
+
+        console_log(
+            f'Resolving {specific_host} using "dig" succeeded with:\n{dig_output}'
+        )
+
+        if ip_address.encode('utf-8') not in dig_output:
+            raise ValueError(
+                f"Test has failed: Incorrectly resolved DUT hostname using digOutput should've contained DUT's IP address:{ip_address}"
+            )
+
     finally:
         stop_mdns_server.set()
         mdns_responder.join()

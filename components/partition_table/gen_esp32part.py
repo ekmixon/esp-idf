@@ -130,7 +130,7 @@ class PartitionTable(list):
     @classmethod
     def from_file(cls, f):
         data = f.read()
-        data_is_binary = data[0:2] == PartitionDefinition.MAGIC_BYTES
+        data_is_binary = data[:2] == PartitionDefinition.MAGIC_BYTES
         if data_is_binary:
             status('Parsing binary partition input...')
             return cls.from_binary(data), True
@@ -148,7 +148,7 @@ class PartitionTable(list):
             f = os.path.expandvars(f)
             m = re.match(r'(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)', f)
             if m:
-                raise InputError("unknown variable '%s'" % m.group(1))
+                raise InputError("unknown variable '%s'" % m[1])
             return f
 
         for line_no in range(len(lines)):
@@ -187,13 +187,12 @@ class PartitionTable(list):
     def __getitem__(self, item):
         """ Allow partition table access via name as well as by
         numeric index. """
-        if isinstance(item, str):
-            for x in self:
-                if x.name == item:
-                    return x
-            raise ValueError("No partition entry named '%s'" % item)
-        else:
+        if not isinstance(item, str):
             return super(PartitionTable, self).__getitem__(item)
+        for x in self:
+            if x.name == item:
+                return x
+        raise ValueError("No partition entry named '%s'" % item)
 
     def find_by_type(self, ptype, subtype):
         """ Return a partition by type & subtype, returns
@@ -208,10 +207,7 @@ class PartitionTable(list):
         return
 
     def find_by_name(self, name):
-        for p in self:
-            if p.name == name:
-                return p
-        return None
+        return next((p for p in self if p.name == name), None)
 
     def verify(self):
         # verify each partition individually
@@ -220,14 +216,11 @@ class PartitionTable(list):
 
         # check on duplicate name
         names = [p.name for p in self]
-        duplicates = set(n for n in names if names.count(n) > 1)
-
-        # print sorted duplicate partitions by name
-        if len(duplicates) != 0:
+        if duplicates := {n for n in names if names.count(n) > 1}:
             critical('A list of partitions that have the same name:')
             for p in sorted(self, key=lambda x:x.name):
-                if len(duplicates.intersection([p.name])) != 0:
-                    critical('%s' % (p.to_csv()))
+                if duplicates.intersection([p.name]):
+                    critical(f'{p.to_csv()}')
             raise InputError('Partition names must be unique')
 
         # check for overlaps
@@ -243,12 +236,12 @@ class PartitionTable(list):
         otadata_duplicates = [p for p in self if p.type == TYPES['data'] and p.subtype == SUBTYPES[DATA_TYPE]['ota']]
         if len(otadata_duplicates) > 1:
             for p in otadata_duplicates:
-                critical('%s' % (p.to_csv()))
+                critical(f'{p.to_csv()}')
             raise InputError('Found multiple otadata partitions. Only one partition can be defined with type="data"(1) and subtype="ota"(0).')
 
         if len(otadata_duplicates) == 1 and otadata_duplicates[0].size != 0x2000:
             p = otadata_duplicates[0]
-            critical('%s' % (p.to_csv()))
+            critical(f'{p.to_csv()}')
             raise InputError('otadata partition must have size = 0x2000')
 
     def flash_size(self):
@@ -321,7 +314,7 @@ class PartitionDefinition(object):
     @classmethod
     def from_csv(cls, line, line_no):
         """ Parse a line from the CSV """
-        line_w_defaults = line + ',,,,'  # lazy way to support default fields
+        line_w_defaults = f'{line},,,,'
         fields = [f.strip() for f in line_w_defaults.split(',')]
 
         res = PartitionDefinition()
@@ -385,9 +378,7 @@ class PartitionDefinition(object):
         return parse_int(strval, SUBTYPES.get(self.type, {}))
 
     def parse_address(self, strval):
-        if strval == '':
-            return None  # PartitionTable will fill in default
-        return parse_int(strval)
+        return None if strval == '' else parse_int(strval)
 
     def verify(self):
         if self.type is None:
@@ -484,13 +475,18 @@ def parse_int(v, keywords={}):
     k/m/K/M suffixes and 'keyword' value lookup.
     """
     try:
-        for letter, multiplier in [('k', 1024), ('m', 1024 * 1024)]:
-            if v.lower().endswith(letter):
-                return parse_int(v[:-1], keywords) * multiplier
-        return int(v, 0)
+        return next(
+            (
+                parse_int(v[:-1], keywords) * multiplier
+                for letter, multiplier in [('k', 1024), ('m', 1024 * 1024)]
+                if v.lower().endswith(letter)
+            ),
+            int(v, 0),
+        )
+
     except ValueError:
         if len(keywords) == 0:
-            raise InputError('Invalid field value %s' % v)
+            raise InputError(f'Invalid field value {v}')
         try:
             return keywords[v.lower()]
         except KeyError:
@@ -570,7 +566,8 @@ class InputError(RuntimeError):
 class ValidationError(InputError):
     def __init__(self, partition, message):
         super(ValidationError, self).__init__(
-            'Partition %s invalid: %s' % (partition.name, message))
+            f'Partition {partition.name} invalid: {message}'
+        )
 
 
 if __name__ == '__main__':

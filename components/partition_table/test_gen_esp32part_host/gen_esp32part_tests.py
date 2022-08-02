@@ -57,7 +57,7 @@ def _strip_trailing_ffs(binary_table):
     Strip all FFs down to the last 32 bytes (terminating entry)
     """
     while binary_table.endswith(b'\xFF' * 64):
-        binary_table = binary_table[0:len(binary_table) - 32]
+        binary_table = binary_table[:len(binary_table) - 32]
     return binary_table
 
 
@@ -189,7 +189,7 @@ first, 0x30, 0xEE, 0x100400, 0x300000
         t = gen_esp32part.PartitionTable.from_csv(csv)
         tb = _strip_trailing_ffs(t.to_binary())
         self.assertEqual(len(tb), 64 + 32)
-        self.assertEqual(b'\xAA\x50', tb[0:2])  # magic
+        self.assertEqual(b'\xAA\x50', tb[:2])
         self.assertEqual(b'\x30\xee', tb[2:4])  # type, subtype
         eo, es = struct.unpack('<LL', tb[4:12])
         self.assertEqual(eo, 0x100400)  # offset
@@ -205,7 +205,7 @@ second,0x31, 0xEF,         , 0x100000
         t = gen_esp32part.PartitionTable.from_csv(csv)
         tb = _strip_trailing_ffs(t.to_binary())
         self.assertEqual(len(tb), 96 + 32)
-        self.assertEqual(b'\xAA\x50', tb[0:2])
+        self.assertEqual(b'\xAA\x50', tb[:2])
         self.assertEqual(b'\xAA\x50', tb[32:34])
 
     def test_encrypted_flag(self):
@@ -459,7 +459,7 @@ ota_1,             0,  ota_1,          , 1M,
 
             sys.stderr = io.StringIO()
             csv_4 = 'factory, app, factory, 0x10000, 0x100100\n' \
-                    'nvs, data, nvs, , 32k'
+                        'nvs, data, nvs, , 32k'
             gen_esp32part.PartitionTable.from_csv(csv_4).verify()
             self.assertIn('WARNING', sys.stderr.getvalue())
             self.assertIn('not aligned to 0x1000', sys.stderr.getvalue())

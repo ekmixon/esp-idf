@@ -18,7 +18,7 @@ def test_examples_protocol_https_request(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'https_request.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('https_request_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('https_request_bin_size', f'{bin_size // 1024}KB')
     # start tes
     Utility.console_log('Starting https_request simple test app')
     dut1.start_app()
@@ -81,7 +81,7 @@ def test_examples_protocol_https_request(env, extra_data):
     # check and log bin size
     binary_file = os.path.join(dut1.app.binary_path, 'https_request.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('https_request_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('https_request_bin_size', f'{bin_size // 1024}KB')
     # start test
     dut1.start_app()
     # only check if one connection is established

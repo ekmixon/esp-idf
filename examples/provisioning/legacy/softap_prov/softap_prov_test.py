@@ -37,7 +37,7 @@ def test_examples_provisioning_softap(env, extra_data):
     # Get binary file
     binary_file = os.path.join(dut1.app.binary_path, 'softap_prov.bin')
     bin_size = os.path.getsize(binary_file)
-    ttfw_idf.log_performance('softap_prov_bin_size', '{}KB'.format(bin_size // 1024))
+    ttfw_idf.log_performance('softap_prov_bin_size', f'{bin_size // 1024}KB')
 
     # Upload binary and start testing
     dut1.start_app()
@@ -49,9 +49,9 @@ def test_examples_provisioning_softap(env, extra_data):
     iface = wifi_tools.get_wiface_name()
     if iface is None:
         raise RuntimeError('Failed to get Wi-Fi interface on host')
-    print('Interface name  : ' + iface)
-    print('SoftAP SSID     : ' + ssid)
-    print('SoftAP Password : ' + password)
+    print(f'Interface name  : {iface}')
+    print(f'SoftAP SSID     : {ssid}')
+    print(f'SoftAP Password : {password}')
 
     try:
         ctrl = wifi_tools.wpa_cli(iface, reset_on_exit=True)
@@ -59,13 +59,13 @@ def test_examples_provisioning_softap(env, extra_data):
         try:
             ip = ctrl.connect(ssid, password)
         except RuntimeError as err:
-            Utility.console_log('error: {}'.format(err))
+            Utility.console_log(f'error: {err}')
         try:
             got_ip = dut1.expect(re.compile(r'DHCP server assigned IP to a station, IP is: (\d+.\d+.\d+.\d+)'), timeout=60)
-            Utility.console_log('got_ip: {}'.format(got_ip))
+            Utility.console_log(f'got_ip: {got_ip}')
             got_ip = got_ip[0]
             if ip != got_ip:
-                raise RuntimeError('SoftAP connected to another host! {} != {}'.format(ip, got_ip))
+                raise RuntimeError(f'SoftAP connected to another host! {ip} != {got_ip}')
         except tiny_test_fw.DUT.ExpectTimeout:
             # print what is happening on dut side
             Utility.console_log('in exception tiny_test_fw.DUT.ExpectTimeout')
@@ -81,7 +81,10 @@ def test_examples_provisioning_softap(env, extra_data):
         provmode = 'softap'
         ap_ssid = 'myssid'
         ap_password = 'mypassword'
-        softap_endpoint = '{}.{}.{}.1:80'.format(ip.split('.')[0], ip.split('.')[1], ip.split('.')[2])
+        softap_endpoint = (
+            f"{ip.split('.')[0]}.{ip.split('.')[1]}.{ip.split('.')[2]}.1:80"
+        )
+
 
         print('Getting security')
         security = esp_prov.get_security(secver, pop, verbose)
